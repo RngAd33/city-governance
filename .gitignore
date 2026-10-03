@@ -8,6 +8,8 @@ dependency-reduced-pom.xml
 .mvn/
 mvnw
 mvnw.cmd
+application-dev.yml
+application-prod.yml
 
 # IDE
 .idea/

@@ -12,9 +12,9 @@ USE city_platform;
 -- 1. 公共事件表 (city-collector)
 -- ============================================================
 
-DROP TABLE IF EXISTS event_records;
+DROP TABLE IF EXISTS event_record;
 
-CREATE TABLE event_records (
+CREATE TABLE event_record (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     event_id VARCHAR(64) NOT NULL UNIQUE COMMENT '事件唯一ID',
     domain VARCHAR(32) NOT NULL COMMENT '领域: traffic/environment/energy/water/disaster/infra',
@@ -102,9 +102,9 @@ CREATE TABLE traffic_flow_data (
 
 -- 2.4 优化记录表
 
-DROP TABLE IF EXISTS optimization_records;
+DROP TABLE IF EXISTS optimization_record;
 
-CREATE TABLE optimization_records (
+CREATE TABLE optimization_record (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     intersection_id VARCHAR(64) NOT NULL COMMENT '路口ID',
     strategy VARCHAR(32) NOT NULL COMMENT '优化策略: genetic/reinforcement/rule',
@@ -219,9 +219,9 @@ CREATE TABLE energy_saving_recommendations (
 
 -- 4.1 环境记录表
 
-DROP TABLE IF EXISTS environment_records;
+DROP TABLE IF EXISTS environment_record;
 
-CREATE TABLE environment_records (
+CREATE TABLE environment_record (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     record_id VARCHAR(64) NOT NULL UNIQUE COMMENT '记录ID',
     city VARCHAR(64) NOT NULL DEFAULT '南京' COMMENT '城市',
@@ -242,9 +242,9 @@ CREATE TABLE environment_records (
 
 -- 4.2 告警规则表
 
-DROP TABLE IF EXISTS alert_rules;
+DROP TABLE IF EXISTS alert_rule;
 
-CREATE TABLE alert_rules (
+CREATE TABLE alert_rule (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     rule_id VARCHAR(64) NOT NULL UNIQUE COMMENT '规则ID',
     name VARCHAR(128) NOT NULL COMMENT '规则名称',
@@ -262,9 +262,9 @@ CREATE TABLE alert_rules (
 
 -- 4.3 告警记录表
 
-DROP TABLE IF EXISTS alert_records;
+DROP TABLE IF EXISTS alert_record;
 
-CREATE TABLE alert_records (
+CREATE TABLE alert_record (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     alert_id VARCHAR(64) NOT NULL UNIQUE COMMENT '告警ID',
     rule_id VARCHAR(64) COMMENT '规则ID',
@@ -290,9 +290,9 @@ CREATE TABLE alert_records (
 
 -- 5.1 水位监测站表
 
-DROP TABLE IF EXISTS water_stations;
+DROP TABLE IF EXISTS water_station;
 
-CREATE TABLE water_stations (
+CREATE TABLE water_station (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     station_id VARCHAR(64) NOT NULL UNIQUE COMMENT '站点ID',
     name VARCHAR(128) NOT NULL COMMENT '站点名称',
@@ -311,9 +311,9 @@ CREATE TABLE water_stations (
 
 -- 5.2 水位记录表
 
-DROP TABLE IF EXISTS water_level_records;
+DROP TABLE IF EXISTS water_level_record;
 
-CREATE TABLE water_level_records (
+CREATE TABLE water_level_record (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     station_id VARCHAR(64) NOT NULL COMMENT '站点ID',
     record_time DATETIME NOT NULL COMMENT '记录时间',
@@ -329,9 +329,9 @@ CREATE TABLE water_level_records (
 
 -- 5.3 洪涝场景表
 
-DROP TABLE IF EXISTS flood_scenarios;
+DROP TABLE IF EXISTS flood_scenario;
 
-CREATE TABLE flood_scenarios (
+CREATE TABLE flood_scenario (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     scenario_id VARCHAR(64) NOT NULL UNIQUE COMMENT '场景ID',
     station_id VARCHAR(64) NOT NULL COMMENT '站点ID',
@@ -355,9 +355,9 @@ CREATE TABLE flood_scenarios (
 
 -- 6.1 决策记录表
 
-DROP TABLE IF EXISTS decision_records;
+DROP TABLE IF EXISTS decision_record;
 
-CREATE TABLE decision_records (
+CREATE TABLE decision_record (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     record_id VARCHAR(64) NOT NULL UNIQUE COMMENT '记录ID',
     query_type VARCHAR(32) NOT NULL COMMENT '查询类型: CHAT/ALERT_EXPLAIN/REPORT/PLAN',
@@ -529,11 +529,11 @@ INSERT INTO buildings (building_id, name, type, area, floors, build_year, lat, l
     ('B005', '科技园区办公楼', 'OFFICE', 45000, 10, 2018, 32.0800, 118.7700, 2800, 0.58),
     ('B006', '大学城图书馆', 'SCHOOL', 30000, 5, 2012, 32.0300, 118.8200, 1500, 0.58),
     ('B007', '国际会议中心', 'COMMERCIAL', 70000, 8, 2016, 32.0650, 118.7950, 4200, 0.58),
-    ('B008', '老年活动中心', 'PUBLIC', 15000, 3, 2000, 32.0550, 118.8050, 800, 0.58);
+    ('B008', '老年活动中心', 'OFFICE', 15000, 3, 2000, 32.0550, 118.8050, 800, 0.58);
 
 -- 9.3 初始化示例水位站
 
-INSERT INTO water_stations (station_id, name, type, lat, lng, warning_level, danger_level, current_level, max_capacity) VALUES
+INSERT INTO water_station (station_id, name, type, lat, lng, warning_level, danger_level, current_level, max_capacity) VALUES
     ('WS001', '长江大桥水文站', 'RIVER', 32.0600, 118.7900, 3.5, 5.0, 2.8, 8.0),
     ('WS002', '玄武湖监测站', 'LAKE', 32.0700, 118.7800, 2.5, 3.5, 1.9, 5.0),
     ('WS003', '秦淮河入江口', 'RIVER', 32.0500, 118.8000, 3.0, 4.5, 2.2, 7.0),

@@ -1,9 +1,13 @@
 package com.cityplatform.environment.model.enums;
 
+import lombok.Getter;
+
 /**
  * AQI空气质量指数等级枚举
  */
+@Getter
 public enum AQILevel {
+
     GOOD(0, 50, "优", "绿色"),
     MODERATE(51, 100, "良", "黄色"),
     UNHEALTHY_SENSITIVE(101, 150, "轻度污染", "橙色"),
@@ -23,11 +27,6 @@ public enum AQILevel {
         this.color = color;
     }
 
-    public int getMin() { return min; }
-    public int getMax() { return max; }
-    public String getDescription() { return description; }
-    public String getColor() { return color; }
-
     /**
      * 根据AQI值获取对应等级
      */
@@ -39,4 +38,5 @@ public enum AQILevel {
         }
         return HAZARDOUS;
     }
+
 }

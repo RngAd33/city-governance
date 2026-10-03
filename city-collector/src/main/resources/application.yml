@@ -24,6 +24,43 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
+  task:
+    scheduling:
+      pool:
+        # 模拟器与两类环境采集任务并行调度
+        size: 3
+
+# 采集服务配置
+collector:
+  simulator:
+    # 模拟器是否生成环境数据，关闭后环境数据完全由外部数据源采集
+    environment-enabled: true
+  sources:
+    # 目标城市
+    city: 南京
+    latitude: 32.06
+    longitude: 118.79
+    address: 江苏省南京市
+    # Open-Meteo 气象API（免费开放，无需密钥）
+    open-meteo:
+      enabled: true
+      base-url: https://api.open-meteo.com/v1/forecast
+      timeout-ms: 10000
+    # OpenAQ 空气质量API（需在 https://explore.openaq.org 注册获取Key）
+    openaq:
+      enabled: true
+      base-url: https://api.openaq.org/v3
+      api-key: ${sky.openaq.api-key}
+      radius-meters: 25000
+      max-locations: 10
+      timeout-ms: 10000
+  environment:
+    # 启动后首次采集延迟（毫秒）
+    initial-delay-ms: 30000
+    # 气象数据采集间隔（毫秒，默认10分钟）
+    weather-interval-ms: 600000
+    # 空气质量数据采集间隔（毫秒，默认30分钟）
+    air-quality-interval-ms: 1800000
 
 logging:
   level:

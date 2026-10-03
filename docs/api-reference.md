@@ -22,6 +22,51 @@
 
 **参数**: limit (默认20)
 
+### GET /api/collector/sources
+查询环境数据源及运行状态
+
+**响应**
+```json
+{
+  "timestamp": "2026-10-03T19:35:00+08:00",
+  "sources": [
+    {
+      "name": "open-meteo",
+      "source": "OPEN_METEO",
+      "categories": ["weather"],
+      "available": true,
+      "fallback": false,
+      "lastFetchTime": "2026-10-03T19:35:57+08:00",
+      "lastSuccess": true,
+      "successCount": 2,
+      "failureCount": 0
+    }
+  ]
+}
+```
+
+### POST /api/collector/sources/fetch
+手动触发环境数据源采集
+
+**参数**: category (weather | airquality | all，默认 all)
+
+**响应**
+```json
+{
+  "success": true,
+  "results": [
+    {
+      "category": "weather",
+      "sourceUsed": "open-meteo",
+      "eventCount": 4,
+      "fallback": false,
+      "metrics": ["temperature", "humidity", "wind_speed", "precipitation"],
+      "message": "采集成功"
+    }
+  ]
+}
+```
+
 ## 2. 交通优化服务 (city-traffic) - 端口 8082
 
 ### GET /api/traffic/status

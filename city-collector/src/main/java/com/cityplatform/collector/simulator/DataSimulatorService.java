@@ -1,12 +1,15 @@
 package com.cityplatform.collector.simulator;
 
+import com.cityplatform.collector.config.CollectorProperties;
 import com.cityplatform.collector.entity.EventRecord;
 import com.cityplatform.collector.repository.EventRecordRepository;
+import com.cityplatform.collector.source.SimulatorEnvironmentSource;
 import com.cityplatform.common.event.CityEvent;
 import com.cityplatform.common.event.EventDomain;
 import com.cityplatform.common.event.EventSource;
 import com.cityplatform.common.event.GeoLocation;
 import com.cityplatform.common.mq.EventPublisher;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,9 +26,8 @@ import java.util.UUID;
  * 定时生成模拟城市数据并发布到事件总线
  */
 @Service
+@Slf4j
 public class DataSimulatorService {
-
-    private static final Logger log = LoggerFactory.getLogger(DataSimulatorService.class);
 
     private static final String CITY_NAME = "南京";
     private static final double CITY_LAT = 32.06;
@@ -34,12 +36,18 @@ public class DataSimulatorService {
 
     private final EventPublisher eventPublisher;
     private final EventRecordRepository eventRecordRepository;
+    private final SimulatorEnvironmentSource simulatorEnvironmentSource;
+    private final CollectorProperties collectorProperties;
     private final Random random = new Random();
 
     public DataSimulatorService(EventPublisher eventPublisher,
-                                EventRecordRepository eventRecordRepository) {
+                                EventRecordRepository eventRecordRepository,
+                                SimulatorEnvironmentSource simulatorEnvironmentSource,
+                                CollectorProperties collectorProperties) {
         this.eventPublisher = eventPublisher;
         this.eventRecordRepository = eventRecordRepository;
+        this.simulatorEnvironmentSource = simulatorEnvironmentSource;
+        this.collectorProperties = collectorProperties;
     }
 
     /**
@@ -51,10 +59,13 @@ public class DataSimulatorService {
 
         List<CityEvent> events = new ArrayList<>();
 
-        // 气象数据
-        events.addAll(generateWeatherData());
-        // 空气质量数据
-        events.addAll(generateAirQualityData());
+        // 气象与空气质量数据：可通过 collector.simulator.environment-enabled 关闭，改由外部数据源采集
+        if (collectorProperties.getSimulator().isEnvironmentEnabled()) {
+            // 气象数据
+            events.addAll(simulatorEnvironmentSource.generateWeatherData());
+            // 空气质量数据
+            events.addAll(simulatorEnvironmentSource.generateAirQualityData());
+        }
         // 交通流数据
         events.addAll(generateTrafficFlowData());
         // 能源消耗数据
@@ -78,56 +89,6 @@ public class DataSimulatorService {
         }
 
         log.info("本轮数据采集完成，共生成 {} 条事件", events.size());
-    }
-
-    /**
-     * 生成气象数据
-     */
-    private List<CityEvent> generateWeatherData() {
-        List<CityEvent> events = new ArrayList<>();
-
-        double temperature = 15.0 + random.nextDouble() * 20.0;
-        events.add(new CityEvent(EventDomain.ENVIRONMENT, CITY_NAME,
-                "temperature", round(temperature, 1), "°C", EventSource.SIMULATOR));
-
-        double humidity = 30.0 + random.nextDouble() * 60.0;
-        events.add(new CityEvent(EventDomain.ENVIRONMENT, CITY_NAME,
-                "humidity", round(humidity, 1), "%", EventSource.SIMULATOR));
-
-        double windSpeed = random.nextDouble() * 15.0;
-        events.add(new CityEvent(EventDomain.ENVIRONMENT, CITY_NAME,
-                "wind_speed", round(windSpeed, 1), "m/s", EventSource.SIMULATOR));
-
-        double precipitation = random.nextDouble() * 50.0;
-        events.add(new CityEvent(EventDomain.ENVIRONMENT, CITY_NAME,
-                "precipitation", round(precipitation, 1), "mm", EventSource.SIMULATOR));
-
-        return events;
-    }
-
-    /**
-     * 生成空气质量数据
-     */
-    private List<CityEvent> generateAirQualityData() {
-        List<CityEvent> events = new ArrayList<>();
-
-        double pm25 = random.nextDouble() * 200.0;
-        events.add(new CityEvent(EventDomain.ENVIRONMENT, CITY_NAME,
-                "pm25", round(pm25, 1), "μg/m³", EventSource.SIMULATOR));
-
-        double pm10 = random.nextDouble() * 300.0;
-        events.add(new CityEvent(EventDomain.ENVIRONMENT, CITY_NAME,
-                "pm10", round(pm10, 1), "μg/m³", EventSource.SIMULATOR));
-
-        double no2 = random.nextDouble() * 100.0;
-        events.add(new CityEvent(EventDomain.ENVIRONMENT, CITY_NAME,
-                "no2", round(no2, 1), "μg/m³", EventSource.SIMULATOR));
-
-        double o3 = random.nextDouble() * 200.0;
-        events.add(new CityEvent(EventDomain.ENVIRONMENT, CITY_NAME,
-                "o3", round(o3, 1), "μg/m³", EventSource.SIMULATOR));
-
-        return events;
     }
 
     /**

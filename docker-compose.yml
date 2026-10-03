@@ -56,7 +56,7 @@ services:
         condition: service_healthy
     environment:
       SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_PORT: 35672
+      SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: admin
       SPRING_RABBITMQ_PASSWORD: admin123
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
@@ -75,7 +75,7 @@ services:
         condition: service_healthy
     environment:
       SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_PORT: 35672
+      SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: admin
       SPRING_RABBITMQ_PASSWORD: admin123
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
@@ -94,7 +94,7 @@ services:
         condition: service_healthy
     environment:
       SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_PORT: 35672
+      SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: admin
       SPRING_RABBITMQ_PASSWORD: admin123
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
@@ -113,7 +113,7 @@ services:
         condition: service_healthy
     environment:
       SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_PORT: 35672
+      SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: admin
       SPRING_RABBITMQ_PASSWORD: admin123
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
@@ -132,7 +132,7 @@ services:
         condition: service_healthy
     environment:
       SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_PORT: 35672
+      SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: admin
       SPRING_RABBITMQ_PASSWORD: admin123
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
@@ -151,7 +151,7 @@ services:
         condition: service_healthy
     environment:
       SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_PORT: 35672
+      SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: admin
       SPRING_RABBITMQ_PASSWORD: admin123
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform

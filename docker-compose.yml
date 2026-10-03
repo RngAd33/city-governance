@@ -1,0 +1,164 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: city-rabbitmq
+    ports:
+      - "35672:5672"
+      - "45672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql:
+    image: mysql:8.0
+    container_name: city-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: city_platform
+      MYSQL_USER: cityuser
+      MYSQL_PASSWORD: citypass
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: city-redis
+    ports:
+      - "26379:6379"
+    volumes:
+      - redis_data:/data
+
+  collector:
+    build: ./city-collector
+    container_name: city-collector
+    ports:
+      - "18081:8081"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 35672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
+      SPRING_DATASOURCE_USERNAME: cityuser
+      SPRING_DATASOURCE_PASSWORD: citypass
+
+  traffic:
+    build: ./city-traffic
+    container_name: city-traffic
+    ports:
+      - "8082:8082"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 35672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
+      SPRING_DATASOURCE_USERNAME: cityuser
+      SPRING_DATASOURCE_PASSWORD: citypass
+
+  energy:
+    build: ./city-energy
+    container_name: city-energy
+    ports:
+      - "8083:8083"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 35672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
+      SPRING_DATASOURCE_USERNAME: cityuser
+      SPRING_DATASOURCE_PASSWORD: citypass
+
+  environment:
+    build: ./city-environment
+    container_name: city-environment
+    ports:
+      - "8084:8084"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 35672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
+      SPRING_DATASOURCE_USERNAME: cityuser
+      SPRING_DATASOURCE_PASSWORD: citypass
+
+  water:
+    build: ./city-water
+    container_name: city-water
+    ports:
+      - "8085:8085"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 35672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
+      SPRING_DATASOURCE_USERNAME: cityuser
+      SPRING_DATASOURCE_PASSWORD: citypass
+
+  govai:
+    build: ./city-govai
+    container_name: city-govai
+    ports:
+      - "8086:8086"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 35672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
+      SPRING_DATASOURCE_USERNAME: cityuser
+      SPRING_DATASOURCE_PASSWORD: citypass
+
+volumes:
+  rabbitmq_data:
+  mysql_data:
+  redis_data:

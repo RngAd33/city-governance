@@ -23,7 +23,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * 环境数据采集编排服务
  * 按配置周期从外部数据源（Open-Meteo/OpenAQ等）采集环境数据，
  * 经数据清洗后发布到RabbitMQ事件总线并持久化；
- * 真实数据源全部失败时自动降级使用模拟器兜底，保证数据流不中断
+ * 真实数据源全部失败时，仅当模拟器环境数据开关开启
+ * （collector.simulator.environment-enabled=true）才降级使用模拟器兜底，
+ * 否则本轮不产生数据，避免混入模拟数据
  */
 @Service
 public class EnvironmentCollectionService {
@@ -31,7 +33,7 @@ public class EnvironmentCollectionService {
     private static final Logger log = LoggerFactory.getLogger(EnvironmentCollectionService.class);
 
     /** 空气质量指标集合 */
-    private static final List<String> AIR_QUALITY_METRICS = List.of("pm25", "pm10", "no2", "o3");
+    private static final List<String> AIR_QUALITY_METRICS = List.of("pm25", "pm10", "no2", "o3", "co", "so2");
 
     private final List<EnvironmentDataSource> allSources;
     private final List<EnvironmentDataSource> realSources;
@@ -119,13 +121,19 @@ public class EnvironmentCollectionService {
             }
         }
 
-        // 兜底：模拟器数据
-        List<CityEvent> valid = qualityValidator.filterInvalid(fallbackSource.generateByCategory(category));
-        publishAndPersist(valid);
-        recordSuccess(fallbackSource);
-        log.info("真实数据源全部不可用，已使用模拟器兜底: category={}, count={}", category.getCode(), valid.size());
-        return new CollectionResult(category.getCode(), fallbackSource.getName(), valid.size(),
-                true, metricsOf(valid), "真实数据源不可用，已使用模拟数据兜底");
+        // 兜底：模拟器数据（仅当模拟器环境数据开关开启时可用，避免混入模拟数据）
+        if (properties.getSimulator().isEnvironmentEnabled()) {
+            List<CityEvent> valid = qualityValidator.filterInvalid(fallbackSource.generateByCategory(category));
+            publishAndPersist(valid);
+            recordSuccess(fallbackSource);
+            log.info("真实数据源全部不可用，已使用模拟器兜底: category={}, count={}", category.getCode(), valid.size());
+            return new CollectionResult(category.getCode(), fallbackSource.getName(), valid.size(),
+                    true, metricsOf(valid), "真实数据源不可用，已使用模拟数据兜底");
+        }
+
+        log.error("真实数据源全部不可用且模拟器环境数据已禁用，本轮无数据产生: category={}", category.getCode());
+        return new CollectionResult(category.getCode(), "none", 0, false, List.of(),
+                "所有真实数据源不可用，模拟器已禁用，未产生数据");
     }
 
     /**

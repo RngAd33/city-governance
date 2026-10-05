@@ -16,6 +16,16 @@ spring:
     port: ${sky.rabbitmq.port}
     username: ${sky.rabbitmq.username}
     password: ${sky.rabbitmq.password}
+  ai:
+    # 设置全局大模型
+    model-type: dashscope
+    # 阿里灵积
+    dashscope:
+      enabled: true
+      api-key: ${sky.ai.dashscope.api-key}
+      chat:
+        options:
+          model: qwen-plus
   jpa:
     hibernate:
       ddl-auto: update
@@ -24,6 +34,15 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
+
+# 阿里云百炼（DashScope）大模型配置
+sky:
+  dashscope:
+    enabled: true
+    # 优先取本地配置的 sky.ai.dashscope.api-key，其次环境变量 DASHSCOPE_API_KEY；均未配置时自动降级为本地模板生成
+    api-key: ${sky.ai.dashscope.api-key}
+    model: ${sky.ai.dashscope.chat.options.model:qwen-plus}
+    timeout-seconds: 60
 
 logging:
   level:

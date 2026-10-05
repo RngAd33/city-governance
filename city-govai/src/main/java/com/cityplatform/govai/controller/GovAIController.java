@@ -59,6 +59,7 @@ public class GovAIController {
         status.put("status", "running");
         status.put("timestamp", new Date());
         status.put("version", "1.0.0");
+        status.put("aiProvider", llmService.getProviderName());
         status.put("capabilities", Arrays.asList(
                 "natural_language_query", "alert_explanation",
                 "report_generation", "plan_retrieval", "knowledge_search"));

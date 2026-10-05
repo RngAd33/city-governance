@@ -11,7 +11,8 @@ import java.util.Map;
 
 /**
  * 数据质量校验器
- * 对环境监测数据进行清洗：过滤缺失值与超出合理范围的异常值
+ * 对采集数据进行清洗：过滤缺失值与超出合理范围的异常值
+ * （覆盖环境监测指标与电网指标）
  */
 @Component
 public class DataQualityValidator {
@@ -19,17 +20,24 @@ public class DataQualityValidator {
     private static final Logger log = LoggerFactory.getLogger(DataQualityValidator.class);
 
     /**
-     * 各指标合理取值范围 [最小值, 最大值]（单位统一后的口径）
+     * 各指标合理取值范围 [最小值, 最大值]（单位统一后的口径，其中 CO 为 mg/m³）
      */
-    private static final Map<String, double[]> METRIC_RANGES = Map.of(
-            "temperature", new double[]{-60, 60},
-            "humidity", new double[]{0, 100},
-            "wind_speed", new double[]{0, 120},
-            "precipitation", new double[]{0, 500},
-            "pm25", new double[]{0, 1000},
-            "pm10", new double[]{0, 2000},
-            "no2", new double[]{0, 2000},
-            "o3", new double[]{0, 2000}
+    private static final Map<String, double[]> METRIC_RANGES = Map.ofEntries(
+            Map.entry("temperature", new double[]{-60, 60}),
+            Map.entry("humidity", new double[]{0, 100}),
+            Map.entry("wind_speed", new double[]{0, 120}),
+            Map.entry("precipitation", new double[]{0, 500}),
+            Map.entry("pm25", new double[]{0, 1000}),
+            Map.entry("pm10", new double[]{0, 2000}),
+            Map.entry("no2", new double[]{0, 2000}),
+            Map.entry("o3", new double[]{0, 2000}),
+            Map.entry("co", new double[]{0, 100}),
+            Map.entry("so2", new double[]{0, 5000}),
+            // 电网指标（Electricity Maps，中国为国家级CN区域估算值）
+            Map.entry("grid_carbon_intensity", new double[]{0, 2000}),
+            Map.entry("grid_renewable_percentage", new double[]{0, 100}),
+            Map.entry("grid_fossil_free_percentage", new double[]{0, 100}),
+            Map.entry("grid_power_consumption", new double[]{0, 3_000_000})
     );
 
     /**

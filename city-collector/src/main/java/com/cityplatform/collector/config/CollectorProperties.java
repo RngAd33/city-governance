@@ -20,11 +20,16 @@ public class CollectorProperties {
     /** 环境采集调度配置 */
     private final Environment environment = new Environment();
 
+    /** 能源电网数据采集调度配置 */
+    private final Energy energy = new Energy();
+
     public Simulator getSimulator() { return simulator; }
 
     public Sources getSources() { return sources; }
 
     public Environment getEnvironment() { return environment; }
+
+    public Energy getEnergy() { return energy; }
 
     /**
      * 模拟器配置
@@ -58,7 +63,11 @@ public class CollectorProperties {
 
         private final OpenMeteo openMeteo = new OpenMeteo();
 
+        private final OpenMeteoAirQuality openMeteoAirQuality = new OpenMeteoAirQuality();
+
         private final OpenAq openaq = new OpenAq();
+
+        private final OwidChina owidChina = new OwidChina();
 
         public String getCity() { return city; }
 
@@ -78,7 +87,11 @@ public class CollectorProperties {
 
         public OpenMeteo getOpenMeteo() { return openMeteo; }
 
+        public OpenMeteoAirQuality getOpenMeteoAirQuality() { return openMeteoAirQuality; }
+
         public OpenAq getOpenaq() { return openaq; }
+
+        public OwidChina getOwidChina() { return owidChina; }
     }
 
     /**
@@ -92,6 +105,34 @@ public class CollectorProperties {
 
         /** API 基础地址 */
         private String baseUrl = "https://api.open-meteo.com/v1/forecast";
+
+        /** HTTP 超时（毫秒） */
+        private int timeoutMs = 10000;
+
+        public boolean isEnabled() { return enabled; }
+
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+        public String getBaseUrl() { return baseUrl; }
+
+        public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
+
+        public int getTimeoutMs() { return timeoutMs; }
+
+        public void setTimeoutMs(int timeoutMs) { this.timeoutMs = timeoutMs; }
+    }
+
+    /**
+     * Open-Meteo 空气质量 API 配置
+     * 免费开放接口，无需密钥，文档: https://open-meteo.com/en/docs/air-quality-api
+     */
+    public static class OpenMeteoAirQuality {
+
+        /** 是否启用 */
+        private boolean enabled = true;
+
+        /** API 基础地址 */
+        private String baseUrl = "https://air-quality-api.open-meteo.com/v1/air-quality";
 
         /** HTTP 超时（毫秒） */
         private int timeoutMs = 10000;
@@ -159,6 +200,35 @@ public class CollectorProperties {
     }
 
     /**
+     * Our World in Data 中国电力数据配置（数据源 Ember，免费无密钥）
+     * 年度粒度数据（碳强度/可再生占比），CSV 直链下载解析，
+     * 数据: https://ourworldindata.org/grapher/carbon-intensity-electricity
+     */
+    public static class OwidChina {
+
+        /** 是否启用 */
+        private boolean enabled = true;
+
+        /** Grapher CSV 基础地址 */
+        private String baseUrl = "https://ourworldindata.org/grapher";
+
+        /** HTTP 超时（毫秒，CSV 文件较大需放宽） */
+        private int timeoutMs = 30000;
+
+        public boolean isEnabled() { return enabled; }
+
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+        public String getBaseUrl() { return baseUrl; }
+
+        public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
+
+        public int getTimeoutMs() { return timeoutMs; }
+
+        public void setTimeoutMs(int timeoutMs) { this.timeoutMs = timeoutMs; }
+    }
+
+    /**
      * 环境数据采集调度配置
      */
     public static class Environment {
@@ -176,5 +246,25 @@ public class CollectorProperties {
         public long getAirQualityIntervalMs() { return airQualityIntervalMs; }
 
         public void setAirQualityIntervalMs(long airQualityIntervalMs) { this.airQualityIntervalMs = airQualityIntervalMs; }
+    }
+
+    /**
+     * 能源电网数据采集调度配置
+     */
+    public static class Energy {
+
+        /** 中国 OWID 数据采集间隔（毫秒，默认24小时，年度数据无需高频采集） */
+        private long chinaIntervalMs = 86_400_000L;
+
+        /** 中国 OWID 首次采集延迟（毫秒） */
+        private long chinaInitialDelayMs = 60_000L;
+
+        public long getChinaIntervalMs() { return chinaIntervalMs; }
+
+        public void setChinaIntervalMs(long chinaIntervalMs) { this.chinaIntervalMs = chinaIntervalMs; }
+
+        public long getChinaInitialDelayMs() { return chinaInitialDelayMs; }
+
+        public void setChinaInitialDelayMs(long chinaInitialDelayMs) { this.chinaInitialDelayMs = chinaInitialDelayMs; }
     }
 }

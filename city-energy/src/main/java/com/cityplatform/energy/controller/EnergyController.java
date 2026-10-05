@@ -4,11 +4,15 @@ import com.cityplatform.energy.analyzer.BuildingEnergyAnalyzer;
 import com.cityplatform.energy.analyzer.LoadPredictor;
 import com.cityplatform.energy.model.Building;
 import com.cityplatform.energy.model.EnergyConsumptionRecord;
+import com.cityplatform.energy.model.GridEnergyRecord;
 import com.cityplatform.energy.repository.BuildingRepository;
 import com.cityplatform.energy.repository.EnergyConsumptionRecordRepository;
+import com.cityplatform.energy.repository.GridEnergyRecordRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,17 +24,24 @@ import java.util.Map;
 @RequestMapping("/api/energy")
 public class EnergyController {
 
+    /** 电网指标名称清单（国内免费公开真实数据：OWID 中国年度） */
+    private static final List<String> GRID_METRICS = List.of(
+            "grid_carbon_intensity", "grid_renewable_percentage");
+
     private final BuildingRepository buildingRepository;
     private final EnergyConsumptionRecordRepository recordRepository;
+    private final GridEnergyRecordRepository gridRepository;
     private final BuildingEnergyAnalyzer analyzer;
     private final LoadPredictor loadPredictor;
 
     public EnergyController(BuildingRepository buildingRepository,
                            EnergyConsumptionRecordRepository recordRepository,
+                           GridEnergyRecordRepository gridRepository,
                            BuildingEnergyAnalyzer analyzer,
                            LoadPredictor loadPredictor) {
         this.buildingRepository = buildingRepository;
         this.recordRepository = recordRepository;
+        this.gridRepository = gridRepository;
         this.analyzer = analyzer;
         this.loadPredictor = loadPredictor;
     }
@@ -94,5 +105,32 @@ public class EnergyController {
                 .orElseThrow(() -> new RuntimeException("建筑不存在: " + buildingId));
         BuildingEnergyAnalyzer.EnergySavingPotential potential = analyzer.calculateEnergySavingPotential(building);
         return ResponseEntity.ok(potential);
+    }
+
+    /**
+     * 电网指标最新值（逐指标取最新一条；真实数据，OWID 中国年度）
+     */
+    @GetMapping("/grid/latest")
+    public ResponseEntity<List<GridEnergyRecord>> getGridLatest(
+            @RequestParam(defaultValue = "CN") String zone) {
+        List<GridEnergyRecord> latest = new ArrayList<>();
+        for (String metric : GRID_METRICS) {
+            gridRepository.findTopByZoneAndMetricOrderByTsDesc(zone, metric).ifPresent(latest::add);
+        }
+        return ResponseEntity.ok(latest);
+    }
+
+    /**
+     * 电网指标历史序列（默认碳强度，默认近24小时，最多90天）
+     */
+    @GetMapping("/grid/history")
+    public ResponseEntity<List<GridEnergyRecord>> getGridHistory(
+            @RequestParam(defaultValue = "CN") String zone,
+            @RequestParam(defaultValue = "grid_carbon_intensity") String metric,
+            @RequestParam(defaultValue = "24") int hours) {
+        OffsetDateTime end = OffsetDateTime.now();
+        OffsetDateTime start = end.minusHours(Math.max(1, Math.min(hours, 2160)));
+        return ResponseEntity.ok(
+                gridRepository.findByZoneAndMetricAndTsBetweenOrderByTsAsc(zone, metric, start, end));
     }
 }

@@ -180,7 +180,8 @@ public class DataSimulatorService {
                 }
                 break;
             case TRAFFIC:
-                if (event.getMetric().contains("signal") || event.getMetric().contains("queue")) {
+                // 仅信号优化结果进入信号优化队列；车流/排队长度等监测指标统一走交通流队列
+                if (event.getMetric().contains("signal")) {
                     eventPublisher.publishSignalOptimization(event);
                 } else {
                     eventPublisher.publishTrafficFlow(event);
@@ -194,6 +195,9 @@ public class DataSimulatorService {
                 break;
             case DISASTER:
                 eventPublisher.publishDisasterScenario(event);
+                break;
+            case INFRA:
+                eventPublisher.publishInfrastructure(event);
                 break;
             default:
                 log.warn("未知领域，使用默认发布方式: {}", event.getDomain());

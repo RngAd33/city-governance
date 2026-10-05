@@ -15,12 +15,18 @@ sky:
 
   rabbitmq:
     host: localhost
-    port: 15672
+    port: 5672
     username: guest
     password: guest
 
   session:
     timeout: 86400
+
+  # AI接口
+  ai:
+    # 阿里灵积
+    dashscope:
+      api-key: sk-5ef48fe5fb5e4b32a0d3aa63d2fe53f7
 
   jwt:
     admin-secret-key: 1d3b72a2b5d9bbd3260a0303ff698b3e

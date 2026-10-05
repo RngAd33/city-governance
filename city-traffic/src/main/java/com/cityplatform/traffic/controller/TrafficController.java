@@ -5,14 +5,18 @@ import com.cityplatform.traffic.model.SignalPhase;
 import com.cityplatform.traffic.model.TrafficFlowData;
 import com.cityplatform.traffic.optimizer.GeneticAlgorithmOptimizer;
 import com.cityplatform.traffic.repository.OptimizationRecordRepository;
+import com.cityplatform.traffic.service.SignalOptimizationService;
+import com.cityplatform.traffic.service.TrafficDataWindow;
 import com.cityplatform.traffic.simulator.TrafficSimulator;
 import com.cityplatform.traffic.entity.OptimizationRecord;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.OffsetDateTime;
 import java.util.*;
 
 /**
@@ -20,21 +24,38 @@ import java.util.*;
  */
 @RestController
 @RequestMapping("/api/traffic")
+@Slf4j
 public class TrafficController {
 
-    private static final Logger log = LoggerFactory.getLogger(TrafficController.class);
-
-    @Autowired
+    @Resource
     private GeneticAlgorithmOptimizer optimizer;
 
-    @Autowired
+    @Resource
     private TrafficSimulator simulator;
 
-    @Autowired
+    @Resource
     private OptimizationRecordRepository optimizationRecordRepository;
+
+    @Resource
+    private TrafficDataWindow dataWindow;
+
+    @Resource
+    private SignalOptimizationService signalOptimizationService;
 
     // 存储最近的模拟运行记录
     private final List<TrafficSimulator.SimulationResult> recentSimulations = new ArrayList<>();
+
+    /** 路口基础信息（INT-001 为自动优化链路监控的主路口） */
+    private static final String[][] INTERSECTIONS = {
+            {"INT-001", "中山北路-中央路交叉口", "鼓楼区"},
+            {"INT-002", "北京东路-太平北路交叉口", "玄武区"},
+            {"INT-003", "汉中路-上海路交叉口", "秦淮区"}};
+
+    /** 默认两相位配时（NS/EW 各 30s） */
+    private List<SignalPhase> defaultPhases() {
+        return List.of(new SignalPhase("P1", "NS", 30, 3, 30),
+                new SignalPhase("P2", "EW", 30, 3, 30));
+    }
 
     /**
      * 获取交通服务状态
@@ -52,6 +73,71 @@ public class TrafficController {
         status.put("crossoverRate", 0.8);
         status.put("timestamp", new Date());
         return ResponseEntity.ok(status);
+    }
+
+    /**
+     * 实时路口列表（前端 IntersectionSelector 数据源）
+     * 流量取自采集窗口平均值并按路口系数展开，供选择与仿真使用
+     */
+    @GetMapping("/segments")
+    public ResponseEntity<List<Map<String, Object>>> getSegments() {
+        double baseFlow = dataWindow.avgFlow();
+        double[] flowFactors = {1.0, 0.7, 1.35};
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (int i = 0; i < INTERSECTIONS.length; i++) {
+            String[] info = INTERSECTIONS[i];
+            double flow = Math.round(baseFlow * flowFactors[i]);
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("intersectionId", info[0]);
+            item.put("segmentId", info[0] + "-NS");
+            item.put("name", info[1]);
+            item.put("area", info[2]);
+            item.put("direction", "NS");
+            item.put("flow", flow);
+            item.put("avgSpeed", dataWindow.avgSpeed());
+            item.put("queueLength", dataWindow.avgQueue());
+            item.put("congestionLevel", flow < 900 ? "smooth" : flow < 1400 ? "moderate" : "congested");
+            item.put("phases", defaultPhases());
+            list.add(item);
+        }
+        return ResponseEntity.ok(list);
+    }
+
+    /**
+     * 运行仿真（前端"开始仿真"入口）
+     * 接收当前配时方案与所选优化策略，执行对应算法的配时优化与优化前后仿真对比；
+     * 响应契约：{intersectionId, strategy, optimizedPhases, beforeSimulation, afterSimulation, improvementPercent}
+     */
+    @PostMapping("/simulation/run")
+    public ResponseEntity<Map<String, Object>> runSimulation(@RequestBody Map<String, Object> request) {
+        String intersectionId = String.valueOf(request.getOrDefault("intersectionId", "INT-001"));
+        String strategy = String.valueOf(request.getOrDefault("strategy", "genetic"));
+        List<SignalPhase> phases = parsePhases((List<Map<String, Object>>) request.get("phases"));
+        if (phases.isEmpty()) {
+            phases = defaultPhases();
+        }
+        log.info("收到仿真请求: 路口={}, 相位数={}, 策略={}", intersectionId, phases.size(), strategy);
+
+        try {
+            SignalOptimizationService.Outcome outcome =
+                    signalOptimizationService.optimizeAndPublish(intersectionId, "南京市", phases, strategy);
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("intersectionId", intersectionId);
+            result.put("strategy", outcome.strategy());
+            result.put("optimizedPhases", outcome.optimizedPhases());
+            result.put("beforeSimulation", outcome.before());
+            result.put("afterSimulation", outcome.after());
+            result.put("improvementPercent", outcome.improvementPercent());
+            result.put("timestamp", OffsetDateTime.now());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("仿真请求处理异常: {}", e.getMessage(), e);
+            Map<String, Object> error = new LinkedHashMap<>();
+            error.put("error", "仿真失败");
+            error.put("message", e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
+        }
     }
 
     /**
@@ -192,23 +278,29 @@ public class TrafficController {
     }
 
     /**
-     * 解析相位配置
+     * 解析相位配置（兼容数值类型差异，缺省字段使用标准值）
      */
     private List<SignalPhase> parsePhases(List<Map<String, Object>> phasesData) {
         List<SignalPhase> phases = new ArrayList<>();
         if (phasesData == null) {
             return phases;
         }
+        int index = 1;
         for (Map<String, Object> data : phasesData) {
             SignalPhase phase = new SignalPhase();
-            phase.setPhaseId((String) data.get("phaseId"));
-            phase.setDirection((String) data.get("direction"));
-            phase.setGreenTime((int) data.get("greenTime"));
-            phase.setYellowTime((int) data.getOrDefault("yellowTime", 3));
-            phase.setRedTime((int) data.get("redTime"));
+            phase.setPhaseId(data.get("phaseId") != null ? String.valueOf(data.get("phaseId")) : "P" + index);
+            phase.setDirection(data.get("direction") != null ? String.valueOf(data.get("direction")) : "NS");
+            phase.setGreenTime(toInt(data.get("greenTime"), 30));
+            phase.setYellowTime(toInt(data.get("yellowTime"), 3));
+            phase.setRedTime(toInt(data.get("redTime"), 30));
             phases.add(phase);
+            index++;
         }
         return phases;
+    }
+
+    private int toInt(Object value, int fallback) {
+        return value instanceof Number number ? number.intValue() : fallback;
     }
 
     /**

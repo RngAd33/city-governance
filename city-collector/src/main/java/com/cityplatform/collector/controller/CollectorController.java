@@ -3,6 +3,7 @@ package com.cityplatform.collector.controller;
 import com.cityplatform.collector.entity.EventRecord;
 import com.cityplatform.collector.repository.EventRecordRepository;
 import com.cityplatform.collector.simulator.DataSimulatorService;
+import com.cityplatform.collector.source.EnergyGridCollectionService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -28,6 +29,9 @@ public class CollectorController {
 
     @Resource
     private EventRecordRepository eventRecordRepository;
+
+    @Resource
+    private EnergyGridCollectionService energyGridCollectionService;
 
     /**
      * 获取服务状态
@@ -80,5 +84,40 @@ public class CollectorController {
             events = events.subList(0, limit);
         }
         return ResponseEntity.ok(events);
+    }
+
+    /**
+     * 电网数据源状态（国内 OWID 中国年度数据，免费公开）
+     */
+    @GetMapping("/energy/grid/status")
+    public ResponseEntity<Map<String, Object>> getGridSourceStatus() {
+        Map<String, Object> result = new HashMap<>();
+        result.put("timestamp", OffsetDateTime.now().toString());
+        result.put("sources", energyGridCollectionService.getStatuses());
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 手动触发一轮电网数据采集
+     */
+    @PostMapping("/energy/grid/fetch")
+    public ResponseEntity<Map<String, Object>> triggerGridFetch() {
+        log.info("手动触发电网数据采集请求");
+        try {
+            int count = energyGridCollectionService.triggerCollect();
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("eventCount", count);
+            result.put("message", "电网数据采集完成");
+            result.put("timestamp", OffsetDateTime.now().toString());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.warn("手动触发电网数据采集失败: {}", e.getMessage());
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", "电网数据采集失败: " + e.getMessage());
+            result.put("timestamp", OffsetDateTime.now().toString());
+            return ResponseEntity.ok(result);
+        }
     }
 }

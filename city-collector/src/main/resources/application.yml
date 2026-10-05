@@ -27,14 +27,14 @@ spring:
   task:
     scheduling:
       pool:
-        # 模拟器与两类环境采集任务并行调度
-        size: 3
+        # 模拟器、两类环境采集与中国OWID数据采集任务并行调度
+        size: 4
 
 # 采集服务配置
 collector:
   simulator:
-    # 模拟器是否生成环境数据，关闭后环境数据完全由外部数据源采集
-    environment-enabled: true
+    # 模拟器是否生成环境数据；false = 环境数据完全由外部数据源采集（模拟器兜底同时禁用）
+    environment-enabled: false
   sources:
     # 目标城市
     city: 南京
@@ -46,7 +46,13 @@ collector:
       enabled: true
       base-url: https://api.open-meteo.com/v1/forecast
       timeout-ms: 10000
-    # OpenAQ 空气质量API（需在 https://explore.openaq.org 注册获取Key）
+    # Open-Meteo 空气质量API（免费开放，无需密钥；空气质量主数据源）
+    open-meteo-air-quality:
+      enabled: true
+      base-url: https://air-quality-api.open-meteo.com/v1/air-quality
+      timeout-ms: 10000
+    # OpenAQ 空气质量API（需在 https://explore.openaq.org 注册获取Key；
+    # 南京站点数据停更于2018年，采集时自动跳过超过24小时的陈旧测量值，作为备用源）
     openaq:
       enabled: true
       base-url: https://api.openaq.org/v3
@@ -54,6 +60,12 @@ collector:
       radius-meters: 25000
       max-locations: 10
       timeout-ms: 10000
+    # Our World in Data 中国电力数据（Ember数据源，免费无密钥，年度粒度；
+    # 数据: https://ourworldindata.org/grapher/carbon-intensity-electricity）
+    owid-china:
+      enabled: true
+      base-url: https://ourworldindata.org/grapher
+      timeout-ms: 30000
   environment:
     # 启动后首次采集延迟（毫秒）
     initial-delay-ms: 30000
@@ -61,6 +73,11 @@ collector:
     weather-interval-ms: 600000
     # 空气质量数据采集间隔（毫秒，默认30分钟）
     air-quality-interval-ms: 1800000
+  energy:
+    # 中国OWID数据采集间隔（毫秒，默认24小时，年度数据无需高频采集）
+    china-interval-ms: 86400000
+    # 中国OWID首次采集延迟（毫秒）
+    china-initial-delay-ms: 60000
 
 logging:
   level:

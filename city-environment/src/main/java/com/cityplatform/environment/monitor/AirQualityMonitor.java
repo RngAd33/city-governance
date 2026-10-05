@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -79,7 +80,8 @@ public class AirQualityMonitor {
 
         for (AlertRule rule : rules) {
             if (!Boolean.TRUE.equals(rule.getEnabled())) continue;
-            if (!rule.getMetric().equalsIgnoreCase(metric)) continue;
+            // 指标名归一化后对比，兼容规则使用 "PM2.5" 等展示名而事件使用小写规范名（pm25）的情况
+            if (!normalizeMetric(rule.getMetric()).equals(normalizeMetric(metric))) continue;
 
             if (rule.getOperator().evaluate(value, rule.getThreshold())) {
                 String message = formatAlertMessage(rule, value);
@@ -98,6 +100,16 @@ public class AirQualityMonitor {
             }
         }
         return alerts;
+    }
+
+    /**
+     * 指标名归一化
+     * 将展示名变体（如 "PM2.5"、"PM 2.5"）统一转换为存储规范小写名称（如 pm25），
+     * 用于规则指标与事件指标的匹配
+     */
+    private String normalizeMetric(String metric) {
+        if (metric == null) return null;
+        return metric.toLowerCase(Locale.ROOT).replace(" ", "").replace(".", "");
     }
 
     /**

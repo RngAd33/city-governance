@@ -1,7 +1,7 @@
 package com.cityplatform.traffic.entity;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 /**
  * 信号优化记录实体
@@ -27,11 +27,19 @@ public class OptimizationRecord {
     @Column(name = "improvement_percent")
     private Double improvementPercent;
 
+    /** 优化后的相位配置（JSON） */
+    @Column(name = "optimized_phases", columnDefinition = "TEXT")
+    private String optimizedPhases;
+
+    /** 触发来源：auto 自动优化链路 / manual 前端仿真 */
+    @Column(name = "source", length = 16)
+    private String source;
+
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     public OptimizationRecord() {
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = OffsetDateTime.now();
     }
 
     // Getters and Setters
@@ -50,8 +58,14 @@ public class OptimizationRecord {
     public Double getImprovementPercent() { return improvementPercent; }
     public void setImprovementPercent(Double improvementPercent) { this.improvementPercent = improvementPercent; }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public String getOptimizedPhases() { return optimizedPhases; }
+    public void setOptimizedPhases(String optimizedPhases) { this.optimizedPhases = optimizedPhases; }
+
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
+
+    public OffsetDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
 
     @Override
     public String toString() {

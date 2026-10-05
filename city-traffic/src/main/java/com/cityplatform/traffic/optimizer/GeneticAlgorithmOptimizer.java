@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
  * 遗传算法信号配时优化器
  *
  * 染色体编码：每个基因代表一个相位的绿灯时间(10-120秒)
- * 适应度函数：最小化总等待时间 = sum(flow * cycleLength * (1 - greenRatio)^2) + 约束惩罚
+ * 适应度函数：最小化总等待时间（M/D/1 排队模型，与 TrafficSimulator 同口径） + 约束惩罚
  * 约束条件：最小绿灯时间 >= 10s, 最大周期 <= 180s, 行人最小绿灯 >= 15s
  */
 @Component
@@ -38,6 +38,12 @@ public class GeneticAlgorithmOptimizer {
     private static final double PENALTY_CYCLE_VIOLATION = 10000.0;
     private static final double PENALTY_MIN_GREEN_VIOLATION = 5000.0;
     private static final double PENALTY_PEDESTRIAN_VIOLATION = 8000.0;
+    // 饱和流量（辆/小时），与 TrafficSimulator 保持一致
+    private static final double SATURATION_FLOW = 1800.0;
+    // 过饱和排队基座（与 TrafficSimulator 一致），使过饱和段与稳态段平滑衔接
+    private static final double OVERFLOW_QUEUE_BASE = 499.0;
+    // 评估窗口（秒），与仿真时长 60 分钟同口径
+    private static final double SIMULATION_SECONDS = 3600.0;
 
     private final Random random = new Random();
 
@@ -154,7 +160,8 @@ public class GeneticAlgorithmOptimizer {
 
     /**
      * 适应度评估
-     * 目标: 最小化总等待时间 = sum(flow * cycleLength * (1 - greenRatio)^2) + 约束惩罚
+     * 目标: 最小化 1 小时总等待时间（与 TrafficSimulator 的 M/D/1 排队模型同口径，
+     * 避免优化方向与仿真验证不一致）+ 约束惩罚
      */
     private double evaluateFitness(Chromosome chromosome, List<SignalPhase> currentPhases,
                                    Map<String, List<TrafficFlowData>> flowByDirection) {
@@ -166,7 +173,7 @@ public class GeneticAlgorithmOptimizer {
             cycleLength += chromosome.genes[i] + YELLOW_TIME;
         }
 
-        // 计算基础等待时间
+        // 计算基础等待时间（M/D/1 排队模型，与仿真器一致）
         double totalWaitTime = 0.0;
         for (int i = 0; i < phaseCount; i++) {
             SignalPhase phase = currentPhases.get(i);
@@ -179,10 +186,24 @@ public class GeneticAlgorithmOptimizer {
             if (dirFlows != null && !dirFlows.isEmpty()) {
                 flow = dirFlows.stream().mapToDouble(TrafficFlowData::getFlow).average().orElse(0.0);
             }
+            if (flow <= 0) {
+                continue;
+            }
 
-            // 等待时间 = flow * cycleLength * (1 - greenRatio)^2
-            double waitTime = flow * cycleLength * Math.pow(1.0 - greenRatio, 2);
-            totalWaitTime += waitTime;
+            // lambda 到达率、mu 服务率（辆/秒）；排队模型与仿真器同口径：
+            // 非饱和用 M/D/1 稳态解，过饱和用溢出外推，避免截断拉平
+            double lambda = flow / 3600.0;
+            double mu = greenRatio * SATURATION_FLOW / 3600.0;
+            double rho = mu > 0 ? lambda / mu : 2.0;
+            double avgQueue;
+            if (rho < 1.0) {
+                avgQueue = (rho * rho) / (2.0 * (1.0 - rho));
+            } else {
+                avgQueue = OVERFLOW_QUEUE_BASE + (lambda - mu) * SIMULATION_SECONDS / 2.0;
+            }
+            double waitSec = avgQueue / lambda;
+            // 1 小时窗口总等待（辆·秒），与仿真 durationMinutes=60 同量纲
+            totalWaitTime += flow * waitSec;
         }
 
         // 约束惩罚

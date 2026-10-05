@@ -7,6 +7,7 @@ import com.cityplatform.environment.monitor.WeatherMonitor;
 import com.cityplatform.environment.repository.AlertRecordRepository;
 import com.cityplatform.environment.repository.AlertRuleRepository;
 import com.cityplatform.environment.repository.EnvironmentRecordRepository;
+import jakarta.annotation.Resource;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,23 +23,20 @@ import java.util.*;
 @RequestMapping("/api/environment")
 public class EnvironmentController {
 
-    private final EnvironmentRecordRepository environmentRecordRepository;
-    private final AlertRuleRepository alertRuleRepository;
-    private final AlertRecordRepository alertRecordRepository;
-    private final AirQualityMonitor airQualityMonitor;
-    private final WeatherMonitor weatherMonitor;
+    @Resource
+    private EnvironmentRecordRepository environmentRecordRepository;
 
-    public EnvironmentController(EnvironmentRecordRepository environmentRecordRepository,
-                                  AlertRuleRepository alertRuleRepository,
-                                  AlertRecordRepository alertRecordRepository,
-                                  AirQualityMonitor airQualityMonitor,
-                                  WeatherMonitor weatherMonitor) {
-        this.environmentRecordRepository = environmentRecordRepository;
-        this.alertRuleRepository = alertRuleRepository;
-        this.alertRecordRepository = alertRecordRepository;
-        this.airQualityMonitor = airQualityMonitor;
-        this.weatherMonitor = weatherMonitor;
-    }
+    @Resource
+    private AlertRuleRepository alertRuleRepository;
+
+    @Resource
+    private AlertRecordRepository alertRecordRepository;
+
+    @Resource
+    private AirQualityMonitor airQualityMonitor;
+
+    @Resource
+    private WeatherMonitor weatherMonitor;
 
     /**
      * 获取环境监测服务状态
@@ -57,13 +55,25 @@ public class EnvironmentController {
     /**
      * 查询环境记录列表
      * 支持按城市、指标、时间范围过滤
+     * hours 参数用于前端 24小时/7天/30天 选项（24/168/720），优先于 startDate/endDate
      */
     @GetMapping("/records")
     public ResponseEntity<List<EnvironmentRecord>> getRecords(
             @RequestParam(required = false) String city,
             @RequestParam(required = false) String metric,
+            @RequestParam(required = false) Integer hours,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endDate) {
+
+        // 指标名归一化：前端可能传 "PM2.5" 等展示名，统一转换为存储规范的小写名称
+        metric = normalizeMetric(metric);
+
+        // hours 转换：[now-hours, now] 查询窗口
+        if (hours != null && hours > 0) {
+            OffsetDateTime now = OffsetDateTime.now();
+            startDate = now.minusHours(hours);
+            endDate = now;
+        }
 
         List<EnvironmentRecord> records;
 
@@ -74,6 +84,8 @@ public class EnvironmentController {
             records = environmentRecordRepository.findByCityAndMetric(city, metric);
         } else if (city != null && startDate != null && endDate != null) {
             records = environmentRecordRepository.findByCityAndTsBetween(city, startDate, endDate);
+        } else if (metric != null && startDate != null && endDate != null) {
+            records = environmentRecordRepository.findByMetricAndTsBetween(metric, startDate, endDate);
         } else if (city != null) {
             records = environmentRecordRepository.findByCity(city);
         } else if (metric != null) {
@@ -84,6 +96,10 @@ public class EnvironmentController {
             records = environmentRecordRepository.findAll();
         }
 
+        // 统一按时间升序返回，保证前端趋势图按时间顺序绘制
+        records = new ArrayList<>(records);
+        records.sort(Comparator.comparing(EnvironmentRecord::getTs));
+
         return ResponseEntity.ok(records);
     }
 
@@ -93,18 +109,20 @@ public class EnvironmentController {
     @GetMapping("/aqi")
     public ResponseEntity<Map<String, Object>> getCurrentAQI(@RequestParam String city) {
         // 获取该城市最新的空气质量相关记录
+        // 注意：数据库存储的指标名为小写规范（pm25/pm10/no2/o3/co/so2），
+        // 与采集端事件命名保持一致，查询时必须使用小写名称
         List<EnvironmentRecord> pm25Records = environmentRecordRepository
-                .findByCityAndMetricOrderByTsDesc(city, "PM2.5");
+                .findByCityAndMetricOrderByTsDesc(city, "pm25");
         List<EnvironmentRecord> pm10Records = environmentRecordRepository
-                .findByCityAndMetricOrderByTsDesc(city, "PM10");
+                .findByCityAndMetricOrderByTsDesc(city, "pm10");
         List<EnvironmentRecord> no2Records = environmentRecordRepository
-                .findByCityAndMetricOrderByTsDesc(city, "NO2");
+                .findByCityAndMetricOrderByTsDesc(city, "no2");
         List<EnvironmentRecord> o3Records = environmentRecordRepository
-                .findByCityAndMetricOrderByTsDesc(city, "O3");
+                .findByCityAndMetricOrderByTsDesc(city, "o3");
         List<EnvironmentRecord> coRecords = environmentRecordRepository
-                .findByCityAndMetricOrderByTsDesc(city, "CO");
+                .findByCityAndMetricOrderByTsDesc(city, "co");
         List<EnvironmentRecord> so2Records = environmentRecordRepository
-                .findByCityAndMetricOrderByTsDesc(city, "SO2");
+                .findByCityAndMetricOrderByTsDesc(city, "so2");
 
         double pm25 = getLatestValue(pm25Records);
         double pm10 = getLatestValue(pm10Records);
@@ -192,6 +210,9 @@ public class EnvironmentController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endDate) {
 
+        // 指标名归一化，兼容前端传入的展示名变体
+        metric = normalizeMetric(metric);
+
         List<EnvironmentRecord> records;
 
         if (city != null && metric != null && startDate != null && endDate != null) {
@@ -218,6 +239,9 @@ public class EnvironmentController {
     public ResponseEntity<List<WeatherMonitor.AnomalyResult>> getAnomalies(
             @RequestParam(required = false) String city,
             @RequestParam(required = false) String metric) {
+
+        // 指标名归一化，兼容前端传入的展示名变体
+        metric = normalizeMetric(metric);
 
         List<EnvironmentRecord> records;
 
@@ -258,5 +282,15 @@ public class EnvironmentController {
     private double getLatestValue(List<EnvironmentRecord> records) {
         if (records == null || records.isEmpty()) return 0;
         return records.get(0).getValue() != null ? records.get(0).getValue() : 0;
+    }
+
+    /**
+     * 指标名归一化
+     * 将前端传入的展示名变体（如 "PM2.5"、"PM 2.5"）统一转换为
+     * 数据库中存储的规范小写名称（如 pm25）
+     */
+    private String normalizeMetric(String metric) {
+        if (metric == null || metric.isBlank()) return metric;
+        return metric.toLowerCase(Locale.ROOT).replace(" ", "").replace(".", "");
     }
 }

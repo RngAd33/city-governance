@@ -21,7 +21,7 @@ public class WaterLevelRecord {
     @Column(name = "station_id", nullable = false, length = 32)
     private String stationId;
 
-    @Column(nullable = false)
+    @Column(name = "record_time", nullable = false)
     private LocalDateTime timestamp;
 
     /** 水位（米） */

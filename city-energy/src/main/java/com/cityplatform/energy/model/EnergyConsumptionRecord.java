@@ -19,7 +19,7 @@ public class EnergyConsumptionRecord {
     @Column(name = "building_id", nullable = false, length = 64)
     private String buildingId;
 
-    @Column(nullable = false)
+    @Column(name = "record_time", nullable = false)
     private LocalDateTime timestamp;
 
     @Column(name = "electricity_kwh", nullable = false)

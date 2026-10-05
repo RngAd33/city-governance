@@ -45,7 +45,8 @@ public class SimulatorEnvironmentSource implements EnvironmentDataSource {
 
     @Override
     public boolean isAvailable() {
-        return true;
+        // 与模拟器环境数据开关联动：关闭时视为不可用（含状态接口展示）
+        return properties.getSimulator().isEnvironmentEnabled();
     }
 
     @Override

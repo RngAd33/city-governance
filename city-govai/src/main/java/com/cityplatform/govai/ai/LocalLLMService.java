@@ -10,29 +10,62 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * 模拟本地LLM服务
- * 使用模板生成 + 上下文注入的方式模拟大语言模型的推理能力
- * 在实际部署中可替换为真实的本地LLM（如ChatGLM、Qwen等）
+ * 政务AI大模型服务
+ * 主路径：调用阿里云百炼（DashScope）通义千问大模型，知识库检索结果作为上下文注入（RAG）
+ * 降级路径：未配置API Key或云端调用失败时，使用本地模板生成兑底，保证服务可用
  */
 @Service
 public class LocalLLMService {
 
     private static final Logger log = LoggerFactory.getLogger(LocalLLMService.class);
 
-    private final KnowledgeBase knowledgeBase;
-    private final Random random = new Random();
+    /** 政务AI助手系统提示词：角色设定与回答规范 */
+    private static final String SYSTEM_PROMPT =
+            "你是城市治理平台的政务AI决策助手，服务于政府管理人员。" +
+            "你熟悉城市环境监测、交通管理、能源调度、水务防汛、应急管理等政务领域知识。" +
+            "回答要求：专业严谨、简洁清晰、分点陈述；涉及应急处置时注明依据并给出建议的响应级别；" +
+            "不得编造监测数据，数据缺失时明确说明；回答末尾不添加免责声明。";
 
-    public LocalLLMService(KnowledgeBase knowledgeBase) {
+    private final KnowledgeBase knowledgeBase;
+    private final DashScopeChatService chatService;
+
+    public LocalLLMService(KnowledgeBase knowledgeBase, DashScopeChatService chatService) {
         this.knowledgeBase = knowledgeBase;
+        this.chatService = chatService;
+    }
+
+    /**
+     * 当前AI提供方标识（供状态接口对外展示）
+     */
+    public String getProviderName() {
+        return chatService.getProviderName();
     }
 
     /**
      * 通用生成接口
-     * 根据prompt和context生成模拟LLM响应
+     * 主路径调用真实大模型，失败时降级为模板生成
      */
     public String generateResponse(String prompt, String context) {
         log.debug("生成响应 - prompt: {}, context长度: {}", prompt, context != null ? context.length() : 0);
 
+        if (chatService.isAvailable()) {
+            try {
+                String userPrompt = prompt;
+                if (context != null && !context.isBlank()) {
+                    userPrompt = prompt + "\n\n【上下文信息】\n" + context;
+                }
+                return chatService.chat(SYSTEM_PROMPT, userPrompt);
+            } catch (Exception e) {
+                log.warn("DashScope调用失败，降级为模板生成: {}", e.getMessage());
+            }
+        }
+        return generateTemplateResponse(prompt, context);
+    }
+
+    /**
+     * 模板降级：按关键词路由到各领域固定模板
+     */
+    private String generateTemplateResponse(String prompt, String context) {
         String lowerPrompt = prompt.toLowerCase();
 
         if (lowerPrompt.contains("告警") || lowerPrompt.contains("alert") || lowerPrompt.contains("预警")) {
@@ -56,14 +89,32 @@ public class LocalLLMService {
 
     /**
      * 告警解释生成
+     * 主路径调用真实大模型（知识库内容作为参考上下文），失败时降级为模板
      */
     public String alertExplanation(String alertType, String city, String details) {
+        List<KnowledgeItem> relatedKnowledge = knowledgeBase.search(alertType + " " + city);
+
+        if (chatService.isAvailable()) {
+            try {
+                return chatService.chat(SYSTEM_PROMPT,
+                        buildAlertExplanationPrompt(alertType, city, details, relatedKnowledge));
+            } catch (Exception e) {
+                log.warn("DashScope调用失败，降级为模板生成告警解释: {}", e.getMessage());
+            }
+        }
+        return templateAlertExplanation(alertType, city, details, relatedKnowledge);
+    }
+
+    /**
+     * 模板降级：告警解释
+     */
+    private String templateAlertExplanation(String alertType, String city, String details,
+                                            List<KnowledgeItem> relatedKnowledge) {
         StringBuilder sb = new StringBuilder();
         sb.append("【").append(alertType).append("告警分析】\n");
         sb.append("城市：").append(city).append("\n");
         sb.append("详情：").append(details).append("\n\n");
 
-        List<KnowledgeItem> relatedKnowledge = knowledgeBase.search(alertType + " " + city);
         if (!relatedKnowledge.isEmpty()) {
             sb.append("关联知识：\n");
             for (KnowledgeItem item : relatedKnowledge) {
@@ -91,8 +142,26 @@ public class LocalLLMService {
 
     /**
      * 报告生成
+     * 主路径调用真实大模型（知识库内容作为参考上下文），失败时降级为模板
      */
     public String reportGeneration(String reportType, String city, String period) {
+        List<KnowledgeItem> relatedKnowledge = knowledgeBase.search(reportType + " " + city);
+
+        if (chatService.isAvailable()) {
+            try {
+                return chatService.chat(SYSTEM_PROMPT,
+                        buildReportPrompt(reportType, city, period, relatedKnowledge));
+            } catch (Exception e) {
+                log.warn("DashScope调用失败，降级为模板生成报告: {}", e.getMessage());
+            }
+        }
+        return templateReportGeneration(reportType, city, period);
+    }
+
+    /**
+     * 模板降级：报告生成
+     */
+    private String templateReportGeneration(String reportType, String city, String period) {
         StringBuilder sb = new StringBuilder();
         sb.append("═══════════════════════════════════════\n");
         sb.append("       ").append(reportType).append("\n");
@@ -122,17 +191,41 @@ public class LocalLLMService {
 
     /**
      * 预案检索
+     * 主路径调用真实大模型（知识库候选预案作为参考上下文），失败时降级为模板
      */
     public String planRetrieval(String eventType, String severity) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("【应急预案检索结果】\n");
-        sb.append("事件类型：").append(eventType).append("\n");
-        sb.append("严重等级：").append(severity).append("\n\n");
+        List<KnowledgeItem> plans = searchPlans(eventType, severity);
 
+        if (chatService.isAvailable()) {
+            try {
+                return chatService.chat(SYSTEM_PROMPT,
+                        buildPlanPrompt(eventType, severity, plans));
+            } catch (Exception e) {
+                log.warn("DashScope调用失败，降级为模板生成预案检索结果: {}", e.getMessage());
+            }
+        }
+        return templatePlanRetrieval(eventType, severity, plans);
+    }
+
+    /**
+     * 从知识库检索候选预案（事件类型+预案，兜底按事件类型+应急检索）
+     */
+    private List<KnowledgeItem> searchPlans(String eventType, String severity) {
         List<KnowledgeItem> plans = knowledgeBase.search(eventType + " 预案 " + severity);
         if (plans.isEmpty()) {
             plans = knowledgeBase.search(eventType + " 应急");
         }
+        return plans;
+    }
+
+    /**
+     * 模板降级：预案检索
+     */
+    private String templatePlanRetrieval(String eventType, String severity, List<KnowledgeItem> plans) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("【应急预案检索结果】\n");
+        sb.append("事件类型：").append(eventType).append("\n");
+        sb.append("严重等级：").append(severity).append("\n\n");
 
         if (!plans.isEmpty()) {
             sb.append("匹配预案：\n");
@@ -154,15 +247,30 @@ public class LocalLLMService {
 
     /**
      * 自然语言查询
+     * 主路径：RAG——知识库检索结果注入上下文，由真实大模型生成回答；失败时降级为模板
      */
     public String naturalLanguageQuery(String query) {
         log.info("处理自然语言查询: {}", query);
 
+        List<KnowledgeItem> searchResults = knowledgeBase.search(query);
+
+        if (chatService.isAvailable()) {
+            try {
+                return chatService.chat(SYSTEM_PROMPT, buildQueryPrompt(query, searchResults));
+            } catch (Exception e) {
+                log.warn("DashScope调用失败，降级为模板回答: {}", e.getMessage());
+            }
+        }
+        return templateNaturalLanguageQuery(query, searchResults);
+    }
+
+    /**
+     * 模板降级：自然语言查询
+     */
+    private String templateNaturalLanguageQuery(String query, List<KnowledgeItem> searchResults) {
         StringBuilder sb = new StringBuilder();
         sb.append("【政务AI智能问答】\n");
         sb.append("查询：").append(query).append("\n\n");
-
-        List<KnowledgeItem> searchResults = knowledgeBase.search(query);
 
         if (!searchResults.isEmpty()) {
             sb.append("检索到 ").append(searchResults.size()).append(" 条相关知识：\n\n");
@@ -179,7 +287,69 @@ public class LocalLLMService {
         return sb.toString();
     }
 
-    // ==================== 内部模板生成方法 ====================
+    // ==================== 真实大模型Prompt构建 ====================
+
+    /**
+     * 将知识库检索结果格式化为大模型上下文
+     */
+    private String buildKnowledgeContext(List<KnowledgeItem> items) {
+        if (items == null || items.isEmpty()) {
+            return "（知识库中无相关内容）";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < items.size(); i++) {
+            KnowledgeItem item = items.get(i);
+            sb.append(i + 1).append(". [").append(item.getCategory()).append("] ")
+              .append(item.getTitle()).append("（来源：").append(item.getSource()).append("）\n")
+              .append(item.getContent()).append("\n\n");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 构建自然语言查询Prompt（RAG）
+     */
+    private String buildQueryPrompt(String query, List<KnowledgeItem> searchResults) {
+        return "【知识库检索结果】\n" + buildKnowledgeContext(searchResults)
+                + "【用户问题】\n" + query
+                + "\n\n请基于以上知识库内容回答用户问题。知识库无相关内容时，结合政务领域常识谨慎回答，并注明信息可能不完整。";
+    }
+
+    /**
+     * 构建告警解释Prompt
+     */
+    private String buildAlertExplanationPrompt(String alertType, String city, String details,
+                                                List<KnowledgeItem> relatedKnowledge) {
+        return "请对以下城市告警进行分析，输出：根因判断、影响因素、处置建议。\n"
+                + "【告警类型】" + alertType + "\n"
+                + "【城市】" + city + "\n"
+                + "【告警详情】" + details + "\n\n"
+                + "【参考知识】\n" + buildKnowledgeContext(relatedKnowledge);
+    }
+
+    /**
+     * 构建报告生成Prompt
+     */
+    private String buildReportPrompt(String reportType, String city, String period,
+                                     List<KnowledgeItem> relatedKnowledge) {
+        return "请生成一份政务报告，包含摘要、关键指标、分析、建议四个部分。\n"
+                + "【报告类型】" + reportType + "\n"
+                + "【城市】" + city + "\n"
+                + "【周期】" + period + "\n\n"
+                + "【参考知识】\n" + buildKnowledgeContext(relatedKnowledge);
+    }
+
+    /**
+     * 构建预案检索Prompt
+     */
+    private String buildPlanPrompt(String eventType, String severity, List<KnowledgeItem> plans) {
+        return "请根据事件类型和严重等级整理应急预案，输出：匹配预案、建议响应级别、行动要点、责任部门建议。\n"
+                + "【事件类型】" + eventType + "\n"
+                + "【严重等级】" + severity + "\n\n"
+                + "【知识库候选预案】\n" + buildKnowledgeContext(plans);
+    }
+
+    // ==================== 内部模板生成方法（降级路径） ====================
 
     private String generateAlertResponse(String prompt, String context) {
         return "基于当前监测数据分析，该告警事件的主要成因包括：气象条件不利、污染物排放累积、" +

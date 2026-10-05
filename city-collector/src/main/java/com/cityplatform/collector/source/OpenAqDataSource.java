@@ -23,7 +23,8 @@ import java.util.Set;
 
 /**
  * OpenAQ 空气质量数据源
- * 通过 OpenAQ v3 API 获取城市周边监测站点的 pm25/pm10/no2/o3 实况浓度
+ * 通过 OpenAQ v3 API 获取城市周边监测站点的 pm25/pm10/no2/o3 实况浓度，
+ * 超过最大陈旧时长的测量值视为站点停更数据、自动跳过（避免写入历史陈旧值）
  * 需在 https://explore.openaq.org 免费注册获取 API Key，文档: https://docs.openaq.org
  */
 @Component
@@ -41,6 +42,9 @@ public class OpenAqDataSource implements EnvironmentDataSource {
 
     /** 默认浓度单位（µg/m³，OpenAQ 常用 µ 符号 U+00B5，统一规范为 μ U+03BC） */
     private static final String DEFAULT_UNIT = "\u03BCg/m\u00B3";
+
+    /** 测量值最大陈旧时长（小时），超过则视为站点已停更、数据无效 */
+    private static final long MAX_MEASUREMENT_AGE_HOURS = 24;
 
     private final CollectorProperties properties;
     private final ObjectMapper objectMapper;
@@ -145,11 +149,18 @@ public class OpenAqDataSource implements EnvironmentDataSource {
         JsonNode first = objectMapper.readTree(body).path("results").path(0);
         if (first.isMissingNode() || !first.path("value").isNumber()) return null;
 
+        // 拒绝陈旧测量值：站点停更时会一直返回最后一笔历史数据，避免写入历史陈旧值
+        OffsetDateTime ts = parseTime(first);
+        if (ts.isBefore(OffsetDateTime.now().minusHours(MAX_MEASUREMENT_AGE_HOURS))) {
+            log.warn("OpenAQ 传感器[{}]最新测量值过于陈旧({}), 视为站点已停更并跳过", sensorId, ts);
+            return null;
+        }
+
         CityEvent event = new CityEvent(EventDomain.ENVIRONMENT,
                 properties.getSources().getCity(), parameter, first.get("value").asDouble(),
                 normalizeUnit(first.path("parameter").path("units").asText(null)),
                 EventSource.OPENAQ);
-        event.setTs(parseTime(first));
+        event.setTs(ts);
         return event;
     }
 

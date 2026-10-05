@@ -70,6 +70,13 @@ public class EventPublisher {
     }
 
     /**
+     * 发布电网实时指标事件（Electricity Maps 真实数据）
+     */
+    public void publishGridIndicator(CityEvent event) {
+        publish(EventBusConfig.RK_ENERGY_GRID, event);
+    }
+
+    /**
      * 发布水位监测事件
      */
     public void publishWaterLevel(CityEvent event) {
@@ -81,6 +88,13 @@ public class EventPublisher {
      */
     public void publishDisasterScenario(CityEvent event) {
         publish(EventBusConfig.RK_DISASTER_SIM, event);
+    }
+
+    /**
+     * 发布基础设施状态事件
+     */
+    public void publishInfrastructure(CityEvent event) {
+        publish(EventBusConfig.RK_INFRA_STATUS, event);
     }
 
     /**

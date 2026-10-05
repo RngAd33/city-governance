@@ -15,9 +15,12 @@ sky:
 
   rabbitmq:
     host: localhost
-    port: 15672
+    port: 5672
     username: guest
     password: guest
+
+  openaq:
+    api-key: 0f34d5ab4ac056e060ef9c45040917dd1e3e59cb02b903562a374434618a1958
 
   session:
     timeout: 86400

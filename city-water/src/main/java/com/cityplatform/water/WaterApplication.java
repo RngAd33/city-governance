@@ -4,8 +4,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * 水务风险与灾害模拟服务
- * 城市水位监测、洪涝风险评估与灾害模拟
+ * 水务监测服务
+ * 城市水位监测记录与排水能力分析（灾害评估与模拟已迁移至 city-disaster）
  */
 @SpringBootApplication(scanBasePackages = "com.cityplatform")
 public class WaterApplication {

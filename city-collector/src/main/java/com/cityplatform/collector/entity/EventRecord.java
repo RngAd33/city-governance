@@ -1,12 +1,17 @@
 package com.cityplatform.collector.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.OffsetDateTime;
 
 /**
  * 城市事件记录实体
  * 用于持久化采集到的城市事件数据
  */
+@Data
+@NoArgsConstructor
 @Entity
 @Table(name = "event_record")
 public class EventRecord {
@@ -39,8 +44,7 @@ public class EventRecord {
     @Column(name = "ts", nullable = false)
     private OffsetDateTime ts;
 
-    public EventRecord() {}
-
+    /** 业务便利构造器：不含自增主键 id */
     public EventRecord(String eventId, String domain, String city, String metric,
                        Double value, String unit, String source, OffsetDateTime ts) {
         this.eventId = eventId;
@@ -51,47 +55,5 @@ public class EventRecord {
         this.unit = unit;
         this.source = source;
         this.ts = ts;
-    }
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public String getEventId() { return eventId; }
-    public void setEventId(String eventId) { this.eventId = eventId; }
-
-    public String getDomain() { return domain; }
-    public void setDomain(String domain) { this.domain = domain; }
-
-    public String getCity() { return city; }
-    public void setCity(String city) { this.city = city; }
-
-    public String getMetric() { return metric; }
-    public void setMetric(String metric) { this.metric = metric; }
-
-    public Double getValue() { return value; }
-    public void setValue(Double value) { this.value = value; }
-
-    public String getUnit() { return unit; }
-    public void setUnit(String unit) { this.unit = unit; }
-
-    public String getSource() { return source; }
-    public void setSource(String source) { this.source = source; }
-
-    public OffsetDateTime getTs() { return ts; }
-    public void setTs(OffsetDateTime ts) { this.ts = ts; }
-
-    @Override
-    public String toString() {
-        return "EventRecord{" +
-                "id=" + id +
-                ", eventId='" + eventId + '\'' +
-                ", domain='" + domain + '\'' +
-                ", city='" + city + '\'' +
-                ", metric='" + metric + '\'' +
-                ", value=" + value +
-                ", unit='" + unit + '\'' +
-                ", source='" + source + '\'' +
-                ", ts=" + ts +
-                '}';
     }
 }

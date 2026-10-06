@@ -1,6 +1,8 @@
 package com.cityplatform.traffic.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,6 +11,8 @@ import java.util.List;
  * 路口模型
  * 包含多个信号相位，可计算周期长度和绿信比
  */
+@Data
+@NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Intersection {
 
@@ -18,15 +22,6 @@ public class Intersection {
     private double lng;
     private List<SignalPhase> phases = new ArrayList<>();
     private int currentCycleLength;
-
-    public Intersection() {}
-
-    public Intersection(String intersectionId, String name, double lat, double lng) {
-        this.intersectionId = intersectionId;
-        this.name = name;
-        this.lat = lat;
-        this.lng = lng;
-    }
 
     /**
      * 计算信号周期长度
@@ -71,36 +66,5 @@ public class Intersection {
      */
     public void addPhase(SignalPhase phase) {
         this.phases.add(phase);
-    }
-
-    // Getters and Setters
-    public String getIntersectionId() { return intersectionId; }
-    public void setIntersectionId(String intersectionId) { this.intersectionId = intersectionId; }
-
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-
-    public double getLat() { return lat; }
-    public void setLat(double lat) { this.lat = lat; }
-
-    public double getLng() { return lng; }
-    public void setLng(double lng) { this.lng = lng; }
-
-    public List<SignalPhase> getPhases() { return phases; }
-    public void setPhases(List<SignalPhase> phases) { this.phases = phases; }
-
-    public int getCurrentCycleLength() { return currentCycleLength; }
-    public void setCurrentCycleLength(int currentCycleLength) { this.currentCycleLength = currentCycleLength; }
-
-    @Override
-    public String toString() {
-        return "Intersection{" +
-                "intersectionId='" + intersectionId + '\'' +
-                ", name='" + name + '\'' +
-                ", lat=" + lat +
-                ", lng=" + lng +
-                ", phases=" + phases +
-                ", currentCycleLength=" + currentCycleLength +
-                '}';
     }
 }

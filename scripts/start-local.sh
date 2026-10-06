@@ -18,8 +18,9 @@ cd city-traffic && mvn spring-boot:run &
 cd city-energy && mvn spring-boot:run &
 cd city-environment && mvn spring-boot:run &
 cd city-water && mvn spring-boot:run &
+cd city-disaster && mvn spring-boot:run &
 cd city-govai && mvn spring-boot:run &
 
 echo "所有服务已启动"
 echo "RabbitMQ管理界面: http://localhost:15672"
-echo "API服务: http://localhost:8081-8086"
+echo "API服务: http://localhost:8081-8088"

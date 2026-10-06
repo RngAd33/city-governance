@@ -2,8 +2,8 @@ package com.cityplatform.common.mq;
 
 import com.cityplatform.common.event.CityEvent;
 import com.cityplatform.common.util.JsonUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
@@ -11,15 +11,12 @@ import org.springframework.stereotype.Component;
  * 城市事件发布器
  * 各服务通过此发布器将事件发送到RabbitMQ事件总线
  */
+@Slf4j
 @Component
 public class EventPublisher {
 
-    private static final Logger log = LoggerFactory.getLogger(EventPublisher.class);
-    private final RabbitTemplate rabbitTemplate;
-
-    public EventPublisher(RabbitTemplate rabbitTemplate) {
-        this.rabbitTemplate = rabbitTemplate;
-    }
+    @Resource
+    private RabbitTemplate rabbitTemplate;
 
     /**
      * 发布事件到指定routing key
@@ -70,7 +67,7 @@ public class EventPublisher {
     }
 
     /**
-     * 发布电网实时指标事件（Electricity Maps 真实数据）
+     * 发布电网指标事件（OWID 中国年度真实数据）
      */
     public void publishGridIndicator(CityEvent event) {
         publish(EventBusConfig.RK_ENERGY_GRID, event);
@@ -81,6 +78,13 @@ public class EventPublisher {
      */
     public void publishWaterLevel(CityEvent event) {
         publish(EventBusConfig.RK_WATER_MONITOR, event);
+    }
+
+    /**
+     * 发布洪水预报事件（Open-Meteo Flood API 真实径流量数据）
+     */
+    public void publishFloodForecast(CityEvent event) {
+        publish(EventBusConfig.RK_WATER_FLOOD, event);
     }
 
     /**

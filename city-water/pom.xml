@@ -10,7 +10,7 @@
     </parent>
     <artifactId>city-water</artifactId>
     <name>City Water</name>
-    <description>水务风险与灾害模拟服务</description>
+    <description>水务监测与排水分析服务</description>
     <dependencies>
         <dependency>
             <groupId>com.cityplatform</groupId>
@@ -38,6 +38,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
     <build>

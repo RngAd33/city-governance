@@ -6,8 +6,9 @@ import com.cityplatform.common.event.EventDomain;
 import com.cityplatform.common.event.EventSource;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -28,9 +29,8 @@ import java.util.Set;
  * 需在 https://explore.openaq.org 免费注册获取 API Key，文档: https://docs.openaq.org
  */
 @Component
+@Slf4j
 public class OpenAqDataSource implements EnvironmentDataSource {
-
-    private static final Logger log = LoggerFactory.getLogger(OpenAqDataSource.class);
 
     private static final String NAME = "openaq";
 
@@ -46,15 +46,22 @@ public class OpenAqDataSource implements EnvironmentDataSource {
     /** 测量值最大陈旧时长（小时），超过则视为站点已停更、数据无效 */
     private static final long MAX_MEASUREMENT_AGE_HOURS = 24;
 
-    private final CollectorProperties properties;
-    private final ObjectMapper objectMapper;
-    private final RestClient restClient;
+    @Resource
+    private CollectorProperties properties;
 
-    public OpenAqDataSource(CollectorProperties properties,
-                            ObjectMapper objectMapper,
-                            RestClient.Builder restClientBuilder) {
-        this.properties = properties;
-        this.objectMapper = objectMapper;
+    @Resource
+    private ObjectMapper objectMapper;
+
+    @Resource
+    private RestClient.Builder restClientBuilder;
+
+    private RestClient restClient;
+
+    /**
+     * 按配置超时构建 HTTP 客户端（依赖注入完成后执行）
+     */
+    @PostConstruct
+    void initRestClient() {
         CollectorProperties.OpenAq config = properties.getSources().getOpenaq();
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(config.getTimeoutMs());

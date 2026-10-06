@@ -1,8 +1,10 @@
 package com.cityplatform.water.risk;
 
 import com.cityplatform.water.model.WaterStation;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -13,9 +15,8 @@ import java.util.List;
  * 评估城市排水管网承载能力，识别排水瓶颈
  */
 @Service
+@Slf4j
 public class DrainageAnalyzer {
-
-    private static final Logger log = LoggerFactory.getLogger(DrainageAnalyzer.class);
 
     /** 排水管网设计排水速率（立方米/秒/公里管道） */
     private static final double DESIGN_DRAINAGE_RATE = 2.5;
@@ -29,6 +30,8 @@ public class DrainageAnalyzer {
     /**
      * 排水能力分析结果
      */
+    @Data
+    @AllArgsConstructor
     public static class DrainageAnalysis {
         private String stationId;
         private String stationName;
@@ -38,6 +41,8 @@ public class DrainageAnalyzer {
         private AdequacyLevel adequacyLevel;
         private List<String> recommendations;
 
+        @Getter
+        @AllArgsConstructor
         public enum AdequacyLevel {
             SUFFICIENT("充足"),
             ADEQUATE("基本满足"),
@@ -45,51 +50,7 @@ public class DrainageAnalyzer {
             CRITICAL("严重不足");
 
             private final String description;
-
-            AdequacyLevel(String description) {
-                this.description = description;
-            }
-
-            public String getDescription() {
-                return description;
-            }
         }
-
-        public DrainageAnalysis() {}
-
-        public DrainageAnalysis(String stationId, String stationName, double inflow,
-                              double drainageCapacity, double adequacyRatio,
-                              AdequacyLevel adequacyLevel, List<String> recommendations) {
-            this.stationId = stationId;
-            this.stationName = stationName;
-            this.inflow = inflow;
-            this.drainageCapacity = drainageCapacity;
-            this.adequacyRatio = adequacyRatio;
-            this.adequacyLevel = adequacyLevel;
-            this.recommendations = recommendations;
-        }
-
-        // Getters and Setters
-        public String getStationId() { return stationId; }
-        public void setStationId(String stationId) { this.stationId = stationId; }
-
-        public String getStationName() { return stationName; }
-        public void setStationName(String stationName) { this.stationName = stationName; }
-
-        public double getInflow() { return inflow; }
-        public void setInflow(double inflow) { this.inflow = inflow; }
-
-        public double getDrainageCapacity() { return drainageCapacity; }
-        public void setDrainageCapacity(double drainageCapacity) { this.drainageCapacity = drainageCapacity; }
-
-        public double getAdequacyRatio() { return adequacyRatio; }
-        public void setAdequacyRatio(double adequacyRatio) { this.adequacyRatio = adequacyRatio; }
-
-        public AdequacyLevel getAdequacyLevel() { return adequacyLevel; }
-        public void setAdequacyLevel(AdequacyLevel adequacyLevel) { this.adequacyLevel = adequacyLevel; }
-
-        public List<String> getRecommendations() { return recommendations; }
-        public void setRecommendations(List<String> recommendations) { this.recommendations = recommendations; }
     }
 
     /**

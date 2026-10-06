@@ -10,8 +10,8 @@ import com.cityplatform.environment.monitor.AirQualityMonitor;
 import com.cityplatform.environment.repository.AlertRecordRepository;
 import com.cityplatform.environment.repository.AlertRuleRepository;
 import com.cityplatform.environment.repository.EnvironmentRecordRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,24 +24,20 @@ import java.util.UUID;
  * 监听气象和空气质量事件队列，处理事件并检查告警规则
  */
 @Component
+@Slf4j
 public class EnvironmentEventConsumer {
 
-    private static final Logger log = LoggerFactory.getLogger(EnvironmentEventConsumer.class);
+    @Resource
+    private EnvironmentRecordRepository environmentRecordRepository;
 
-    private final EnvironmentRecordRepository environmentRecordRepository;
-    private final AlertRuleRepository alertRuleRepository;
-    private final AlertRecordRepository alertRecordRepository;
-    private final AirQualityMonitor airQualityMonitor;
+    @Resource
+    private AlertRuleRepository alertRuleRepository;
 
-    public EnvironmentEventConsumer(EnvironmentRecordRepository environmentRecordRepository,
-                                     AlertRuleRepository alertRuleRepository,
-                                     AlertRecordRepository alertRecordRepository,
-                                     AirQualityMonitor airQualityMonitor) {
-        this.environmentRecordRepository = environmentRecordRepository;
-        this.alertRuleRepository = alertRuleRepository;
-        this.alertRecordRepository = alertRecordRepository;
-        this.airQualityMonitor = airQualityMonitor;
-    }
+    @Resource
+    private AlertRecordRepository alertRecordRepository;
+
+    @Resource
+    private AirQualityMonitor airQualityMonitor;
 
     /**
      * 监听气象事件队列

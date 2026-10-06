@@ -1,6 +1,6 @@
 package com.cityplatform.govai.repository;
 
-import com.cityplatform.govai.entity.DecisionRecord;
+import com.cityplatform.govai.model.entity.DecisionRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -21,4 +21,5 @@ public interface DecisionRecordRepository extends JpaRepository<DecisionRecord, 
      * 按置信度阈值查找记录
      */
     List<DecisionRecord> findByConfidenceGreaterThanEqualOrderByCreatedAtDesc(Double confidence);
+
 }

@@ -8,14 +8,23 @@ import com.cityplatform.energy.model.GridEnergyRecord;
 import com.cityplatform.energy.repository.BuildingRepository;
 import com.cityplatform.energy.repository.EnergyConsumptionRecordRepository;
 import com.cityplatform.energy.repository.GridEnergyRecordRepository;
+import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * 能耗分析REST控制器
@@ -28,23 +37,28 @@ public class EnergyController {
     private static final List<String> GRID_METRICS = List.of(
             "grid_carbon_intensity", "grid_renewable_percentage");
 
-    private final BuildingRepository buildingRepository;
-    private final EnergyConsumptionRecordRepository recordRepository;
-    private final GridEnergyRecordRepository gridRepository;
-    private final BuildingEnergyAnalyzer analyzer;
-    private final LoadPredictor loadPredictor;
+    /** 能耗记录以事件 UTC 墙钟时间入库（EnergyEventConsumer 取事件 ts 的 UTC 语义墙钟），查询锚点须同基准 */
+    private static final ZoneOffset RECORD_OFFSET = ZoneOffset.UTC;
+    /** 城市本地时区（南京），用于时间桶对齐到自然边界（整点/零点） */
+    private static final ZoneId CITY_ZONE = ZoneId.of("Asia/Shanghai");
+    /** 桶时间下发格式：UTC ISO（带 Z 后缀），前端 new Date() 自动转为本地时间展示 */
+    private static final DateTimeFormatter BUCKET_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
-    public EnergyController(BuildingRepository buildingRepository,
-                           EnergyConsumptionRecordRepository recordRepository,
-                           GridEnergyRecordRepository gridRepository,
-                           BuildingEnergyAnalyzer analyzer,
-                           LoadPredictor loadPredictor) {
-        this.buildingRepository = buildingRepository;
-        this.recordRepository = recordRepository;
-        this.gridRepository = gridRepository;
-        this.analyzer = analyzer;
-        this.loadPredictor = loadPredictor;
-    }
+    @Resource
+    private BuildingRepository buildingRepository;
+
+    @Resource
+    private EnergyConsumptionRecordRepository recordRepository;
+
+    @Resource
+    private GridEnergyRecordRepository gridRepository;
+
+    @Resource
+    private BuildingEnergyAnalyzer analyzer;
+
+    @Resource
+    private LoadPredictor loadPredictor;
 
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getStatus() {
@@ -68,6 +82,71 @@ public class EnergyController {
         List<EnergyConsumptionRecord> records = recordRepository.findByBuildingId(id);
         BuildingEnergyAnalyzer.EnergyAnalysisResult result = analyzer.analyzeBuilding(building, records);
         return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 建筑能耗历史（按时间桶聚合 total_kwh 均值，供前端绘制能耗趋势）
+     * hours 查询窗口小时数（1~8760）；bucketHours 桶粒度小时数（1~24），桶边界按城市本地时区对齐；
+     * 返回 [{bucketTime: UTC ISO, avgTotalKwh, sampleCount}] 按时间升序，无样本的桶不下发
+     */
+    @GetMapping("/buildings/{id}/history")
+    public ResponseEntity<List<Map<String, Object>>> getBuildingHistory(
+            @PathVariable String id,
+            @RequestParam(defaultValue = "24") int hours,
+            @RequestParam(defaultValue = "1") int bucketHours) {
+        buildingRepository.findByBuildingId(id)
+                .orElseThrow(() -> new RuntimeException("建筑不存在: " + id));
+
+        int safeHours = Math.min(Math.max(hours, 1), 8760);
+        int safeBucket = Math.min(Math.max(bucketHours, 1), 24);
+
+        // 记录时间为 UTC 墙钟，查询锚点须用同基准的当前时刻
+        LocalDateTime endUtc = LocalDateTime.now(RECORD_OFFSET);
+        LocalDateTime startUtc = endUtc.minusHours(safeHours);
+        List<EnergyConsumptionRecord> records = recordRepository
+                .findByBuildingIdAndTimestampBetween(id, startUtc, endUtc);
+
+        // 分桶聚合：桶键为对齐后的 UTC 墙钟时间，TreeMap 保证升序输出
+        Map<LocalDateTime, List<Double>> buckets = new TreeMap<>();
+        for (EnergyConsumptionRecord record : records) {
+            if (record.getTimestamp() == null) {
+                continue;
+            }
+            LocalDateTime bucketKey = alignToBucket(record.getTimestamp(), safeBucket);
+            buckets.computeIfAbsent(bucketKey, k -> new ArrayList<>()).add(record.getTotalKwh());
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<LocalDateTime, List<Double>> entry : buckets.entrySet()) {
+            List<Double> values = entry.getValue();
+            double mean = values.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+            Map<String, Object> bucket = new LinkedHashMap<>();
+            bucket.put("bucketTime", entry.getKey().format(BUCKET_TIME_FORMATTER));
+            bucket.put("avgTotalKwh", Math.round(mean * 10.0) / 10.0);
+            bucket.put("sampleCount", values.size());
+            result.add(bucket);
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 将记录时间（UTC 墙钟）对齐到时间桶的自然边界：
+     * 1h → 本地整点；24h → 本地零点；其余 → 本地「零点 + 桶粒度整倍」时刻。
+     * 先还原为瞬时点转城市本地时区对齐，再转回 UTC 墙钟作桶键，
+     * 保证并行查询的各建筑桶边界严格一致
+     */
+    private LocalDateTime alignToBucket(LocalDateTime recordTimeUtc, int bucketHours) {
+        ZonedDateTime local = recordTimeUtc.atOffset(RECORD_OFFSET).atZoneSameInstant(CITY_ZONE);
+        ZonedDateTime localBucket;
+        if (bucketHours >= 24) {
+            localBucket = local.truncatedTo(ChronoUnit.DAYS);
+        } else if (bucketHours == 1) {
+            localBucket = local.truncatedTo(ChronoUnit.HOURS);
+        } else {
+            localBucket = local.truncatedTo(ChronoUnit.DAYS)
+                    .plusHours((local.getHour() / bucketHours) * bucketHours);
+        }
+        return localBucket.withZoneSameInstant(RECORD_OFFSET).toLocalDateTime();
     }
 
     @GetMapping("/high-consumption")

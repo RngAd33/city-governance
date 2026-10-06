@@ -6,8 +6,9 @@ import com.cityplatform.collector.repository.EventRecordRepository;
 import com.cityplatform.common.event.CityEvent;
 import com.cityplatform.common.event.GeoLocation;
 import com.cityplatform.common.mq.EventPublisher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -28,29 +29,44 @@ import java.util.concurrent.atomic.AtomicLong;
  * 否则本轮不产生数据，避免混入模拟数据
  */
 @Service
+@Slf4j
 public class EnvironmentCollectionService {
-
-    private static final Logger log = LoggerFactory.getLogger(EnvironmentCollectionService.class);
 
     /** 空气质量指标集合 */
     private static final List<String> AIR_QUALITY_METRICS = List.of("pm25", "pm10", "no2", "o3", "co", "so2");
 
-    private final List<EnvironmentDataSource> allSources;
-    private final List<EnvironmentDataSource> realSources;
-    private final SimulatorEnvironmentSource fallbackSource;
-    private final EventPublisher eventPublisher;
-    private final EventRecordRepository eventRecordRepository;
-    private final DataQualityValidator qualityValidator;
-    private final CollectorProperties properties;
+    @Resource
+    private List<EnvironmentDataSource> dataSources;
+
+    @Resource
+    private EventPublisher eventPublisher;
+
+    @Resource
+    private EventRecordRepository eventRecordRepository;
+
+    @Resource
+    private DataQualityValidator qualityValidator;
+
+    @Resource
+    private CollectorProperties properties;
+
+    /** 全部数据源（注入后由 initSources 初始化） */
+    private List<EnvironmentDataSource> allSources;
+
+    /** 真实数据源（不含模拟器兜底） */
+    private List<EnvironmentDataSource> realSources;
+
+    /** 模拟器兜底数据源 */
+    private SimulatorEnvironmentSource fallbackSource;
 
     /** 数据源运行时状态 */
     private final Map<String, SourceRuntimeStatus> runtimeStatus = new ConcurrentHashMap<>();
 
-    public EnvironmentCollectionService(List<EnvironmentDataSource> dataSources,
-                                        EventPublisher eventPublisher,
-                                        EventRecordRepository eventRecordRepository,
-                                        DataQualityValidator qualityValidator,
-                                        CollectorProperties properties) {
+    /**
+     * 派生数据源列表并输出初始化日志（依赖注入完成后执行）
+     */
+    @PostConstruct
+    void initSources() {
         this.allSources = List.copyOf(dataSources);
         this.realSources = dataSources.stream().filter(source -> !source.isFallback()).toList();
         this.fallbackSource = dataSources.stream()
@@ -58,10 +74,6 @@ public class EnvironmentCollectionService {
                 .map(SimulatorEnvironmentSource.class::cast)
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("缺少模拟器兜底数据源"));
-        this.eventPublisher = eventPublisher;
-        this.eventRecordRepository = eventRecordRepository;
-        this.qualityValidator = qualityValidator;
-        this.properties = properties;
         log.info("环境数据源初始化完成: 真实数据源={}, 兜底数据源={}",
                 realSources.stream().map(EnvironmentDataSource::getName).toList(),
                 fallbackSource.getName());

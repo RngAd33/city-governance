@@ -1,8 +1,13 @@
 package com.cityplatform.energy.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
 /**
  * 建筑类型枚举
  */
+@Getter
+@AllArgsConstructor
 public enum BuildingType {
     OFFICE("办公楼"),
     SCHOOL("学校"),
@@ -11,12 +16,4 @@ public enum BuildingType {
     COMMERCIAL("商业");
 
     private final String description;
-
-    BuildingType(String description) {
-        this.description = description;
-    }
-
-    public String getDescription() {
-        return description;
-    }
 }

@@ -1,6 +1,8 @@
 package com.cityplatform.environment.monitor;
 
 import com.cityplatform.environment.model.EnvironmentRecord;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -42,6 +44,8 @@ public class WeatherMonitor {
     /**
      * 趋势方向枚举
      */
+    @Getter
+    @AllArgsConstructor
     public enum TrendDirection {
         RISING("上升"),
         FALLING("下降"),
@@ -49,12 +53,6 @@ public class WeatherMonitor {
         FLUCTUATING("波动");
 
         private final String description;
-
-        TrendDirection(String description) {
-            this.description = description;
-        }
-
-        public String getDescription() { return description; }
     }
 
     /**

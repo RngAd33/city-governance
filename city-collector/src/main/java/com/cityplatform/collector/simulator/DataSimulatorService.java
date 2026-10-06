@@ -9,9 +9,8 @@ import com.cityplatform.common.event.EventDomain;
 import com.cityplatform.common.event.EventSource;
 import com.cityplatform.common.event.GeoLocation;
 import com.cityplatform.common.mq.EventPublisher;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -34,21 +33,31 @@ public class DataSimulatorService {
     private static final double CITY_LNG = 118.79;
     private static final String CITY_ADDRESS = "江苏省南京市";
 
-    private final EventPublisher eventPublisher;
-    private final EventRecordRepository eventRecordRepository;
-    private final SimulatorEnvironmentSource simulatorEnvironmentSource;
-    private final CollectorProperties collectorProperties;
-    private final Random random = new Random();
+    /** 南京建筑清单（与 sql/init_fixed.sql 种子 B001-B008 一致）：能源模拟仅生成南京地区建筑数据。
+     *  日均能耗基线 = 真实建筑面积 × 行业能耗强度（参考知识库 STD-003：办公 80-100 / 医疗 150 / 商业 120 / 教育 55 / 住宅 35 kWh/㎡·年） */
+    private static final List<NanjingBuilding> NANJING_BUILDINGS = List.of(
+            new NanjingBuilding("B001", "office", 6100),       // 南京市政务服务中心 2.8万㎡
+            new NanjingBuilding("B002", "hospital", 197300),   // 江苏省人民医院 48万㎡
+            new NanjingBuilding("B003", "commercial", 102900), // 德基广场 31.3万㎡
+            new NanjingBuilding("B004", "residential", 70900), // 仁恒江湾城 74万㎡
+            new NanjingBuilding("B005", "office", 71500),      // 紫峰大厦 26.1万㎡
+            new NanjingBuilding("B006", "school", 20600),      // 南京外国语学校 13.7万㎡
+            new NanjingBuilding("B007", "commercial", 78900),  // 南京国际博览中心 36万㎡
+            new NanjingBuilding("B008", "office", 3000));      // 南京人民大会堂 1.2万㎡
 
-    public DataSimulatorService(EventPublisher eventPublisher,
-                                EventRecordRepository eventRecordRepository,
-                                SimulatorEnvironmentSource simulatorEnvironmentSource,
-                                CollectorProperties collectorProperties) {
-        this.eventPublisher = eventPublisher;
-        this.eventRecordRepository = eventRecordRepository;
-        this.simulatorEnvironmentSource = simulatorEnvironmentSource;
-        this.collectorProperties = collectorProperties;
-    }
+    @Resource
+    private EventPublisher eventPublisher;
+
+    @Resource
+    private EventRecordRepository eventRecordRepository;
+
+    @Resource
+    private SimulatorEnvironmentSource simulatorEnvironmentSource;
+
+    @Resource
+    private CollectorProperties collectorProperties;
+
+    private final Random random = new Random();
 
     /**
      * 每10秒执行一次数据采集与发布
@@ -70,8 +79,7 @@ public class DataSimulatorService {
         events.addAll(generateTrafficFlowData());
         // 能源消耗数据
         events.addAll(generateEnergyConsumptionData());
-        // 水务监测数据
-        events.addAll(generateWaterLevelData());
+        // 水务监测数据：由 WaterLevelCollectionService 以真实降水与长江径流量推算（非随机模拟）
         // 基础设施状态数据
         events.addAll(generateInfrastructureData());
 
@@ -113,40 +121,26 @@ public class DataSimulatorService {
     }
 
     /**
-     * 生成能源消耗数据
+     * 生成能源消耗数据（仅南京地区建筑）：随机选取一栋南京建筑，
+     * 以日均能耗为基线波动，事件携带建筑ID（rawData）供 city-energy 按建筑归档
      */
     private List<CityEvent> generateEnergyConsumptionData() {
         List<CityEvent> events = new ArrayList<>();
 
-        String[] buildingTypes = {"residential", "commercial", "industrial", "public"};
-        String buildingType = buildingTypes[random.nextInt(buildingTypes.length)];
-
-        double consumption = 100.0 + random.nextDouble() * 4900.0;
-        events.add(new CityEvent(EventDomain.ENERGY, CITY_NAME,
-                "electricity_consumption_" + buildingType, round(consumption, 1), "kWh", EventSource.SIMULATOR));
-
-        return events;
-    }
-
-    /**
-     * 生成水务监测数据
-     */
-    private List<CityEvent> generateWaterLevelData() {
-        List<CityEvent> events = new ArrayList<>();
-
-        double waterLevel = random.nextDouble() * 10.0;
-        events.add(new CityEvent(EventDomain.WATER, CITY_NAME,
-                "water_level", round(waterLevel, 2), "m", EventSource.SIMULATOR));
-
-        double flowRate = random.nextDouble() * 1000.0;
-        events.add(new CityEvent(EventDomain.WATER, CITY_NAME,
-                "flow_rate", round(flowRate, 1), "m³/s", EventSource.SIMULATOR));
+        NanjingBuilding building = NANJING_BUILDINGS.get(random.nextInt(NANJING_BUILDINGS.size()));
+        double consumption = building.avgDailyKwh() / 24.0 * (0.7 + random.nextDouble() * 0.6);
+        CityEvent event = new CityEvent(EventDomain.ENERGY, CITY_NAME,
+                "electricity_consumption_" + building.type(), round(consumption, 1), "kWh", EventSource.SIMULATOR);
+        event.setRawData("buildingId=" + building.id());
+        events.add(event);
 
         return events;
     }
 
     /**
-     * 生成基础设施状态数据
+     * 生成南京重点设施状态数据
+     * 设施ID与南京市重点设施对应：bridge=南京长江大桥 / tunnel=定淮门长江隧道 /
+     * road=玄武大道 / pipeline=江北新区综合管廊 / power_grid=新街口片区电网
      */
     private List<CityEvent> generateInfrastructureData() {
         List<CityEvent> events = new ArrayList<>();
@@ -154,8 +148,18 @@ public class DataSimulatorService {
         String[] facilities = {"bridge", "tunnel", "road", "pipeline", "power_grid"};
         String facility = facilities[random.nextInt(facilities.length)];
 
-        // 设施状态评分 (0-100)
-        double statusScore = 60.0 + random.nextDouble() * 40.0;
+        // 设施状态评分 (0-100)：按各设施监测波动特征取基线随机值
+        double base;
+        double deviation;
+        switch (facility) {
+            case "bridge" -> { base = 84.0; deviation = 8.0; }     // 南京长江大桥
+            case "tunnel" -> { base = 79.0; deviation = 9.0; }     // 定淮门长江隧道
+            case "road" -> { base = 86.0; deviation = 7.0; }       // 玄武大道
+            case "pipeline" -> { base = 75.0; deviation = 10.0; }  // 江北新区综合管廊
+            default -> { base = 88.0; deviation = 6.0; }           // 新街口片区电网
+        }
+        double statusScore = Math.max(40.0, Math.min(100.0,
+                base + (random.nextDouble() * 2 - 1) * deviation));
         events.add(new CityEvent(EventDomain.INFRA, CITY_NAME,
                 "facility_status_" + facility, round(statusScore, 1), "score", EventSource.SIMULATOR));
 
@@ -240,5 +244,11 @@ public class DataSimulatorService {
     private double round(double value, int decimalPlaces) {
         double factor = Math.pow(10, decimalPlaces);
         return Math.round(value * factor) / factor;
+    }
+
+    /**
+     * 南京建筑（id=建筑ID，type=用电类型后缀，avgDailyKwh=日均能耗基线）
+     */
+    private record NanjingBuilding(String id, String type, double avgDailyKwh) {
     }
 }

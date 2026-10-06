@@ -2,6 +2,10 @@ package com.cityplatform.water.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
@@ -9,6 +13,8 @@ import java.time.LocalDateTime;
  * 水位监测记录实体
  * 存储各站点的时间序列水位数据
  */
+@Data
+@NoArgsConstructor
 @Entity
 @Table(name = "water_level_record")
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -40,8 +46,9 @@ public class WaterLevelRecord {
     @Column(name = "risk_level", nullable = false, length = 16)
     private RiskLevel riskLevel;
 
-    public WaterLevelRecord() {}
-
+    /**
+     * 业务便利构造器：不含自增主键 id
+     */
     public WaterLevelRecord(String stationId, LocalDateTime timestamp,
                             Double waterLevel, Double flowRate,
                             Double rainfall, RiskLevel riskLevel) {
@@ -56,6 +63,8 @@ public class WaterLevelRecord {
     /**
      * 风险等级枚举
      */
+    @Getter
+    @AllArgsConstructor
     public enum RiskLevel {
         LOW("低风险"),
         MEDIUM("中风险"),
@@ -63,48 +72,5 @@ public class WaterLevelRecord {
         CRITICAL("严重风险");
 
         private final String description;
-
-        RiskLevel(String description) {
-            this.description = description;
-        }
-
-        public String getDescription() {
-            return description;
-        }
-    }
-
-    // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public String getStationId() { return stationId; }
-    public void setStationId(String stationId) { this.stationId = stationId; }
-
-    public LocalDateTime getTimestamp() { return timestamp; }
-    public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
-
-    public Double getWaterLevel() { return waterLevel; }
-    public void setWaterLevel(Double waterLevel) { this.waterLevel = waterLevel; }
-
-    public Double getFlowRate() { return flowRate; }
-    public void setFlowRate(Double flowRate) { this.flowRate = flowRate; }
-
-    public Double getRainfall() { return rainfall; }
-    public void setRainfall(Double rainfall) { this.rainfall = rainfall; }
-
-    public RiskLevel getRiskLevel() { return riskLevel; }
-    public void setRiskLevel(RiskLevel riskLevel) { this.riskLevel = riskLevel; }
-
-    @Override
-    public String toString() {
-        return "WaterLevelRecord{" +
-                "id=" + id +
-                ", stationId='" + stationId + '\'' +
-                ", timestamp=" + timestamp +
-                ", waterLevel=" + waterLevel +
-                ", flowRate=" + flowRate +
-                ", rainfall=" + rainfall +
-                ", riskLevel=" + riskLevel +
-                '}';
     }
 }

@@ -62,7 +62,8 @@ test_endpoint "采集服务" "http://localhost:8081/api/collector/status"
 test_endpoint "交通优化服务" "http://localhost:8082/api/traffic/status"
 test_endpoint "能耗分析服务" "http://localhost:8083/api/energy/status"
 test_endpoint "环境监测服务" "http://localhost:8084/api/environment/status"
-test_endpoint "水务风险服务" "http://localhost:8085/api/water/status"
+test_endpoint "水务监测服务" "http://localhost:8085/api/water/status"
+test_endpoint "灾害模拟服务" "http://localhost:8088/api/disaster/current"
 test_endpoint "政务AI服务" "http://localhost:8086/api/govai/status"
 
 echo ""
@@ -71,7 +72,7 @@ test_post "触发数据采集" "http://localhost:8081/api/collector/trigger" '{}
 test_post "交通信号优化" "http://localhost:8082/api/traffic/optimize" '{"intersectionId":"INT-001","phases":[{"direction":"NS","greenTime":30},{"direction":"EW","greenTime":25}]}'
 test_post "能耗分析" "http://localhost:8083/api/energy/buildings/B001/analysis" '{}'
 test_post "环境记录查询" "http://localhost:8084/api/environment/records" '{}'
-test_post "水务风险评估" "http://localhost:8085/api/water/stations/WS001/risk" '{}'
+test_endpoint "灾害风险评估" "http://localhost:8088/api/disaster/stations/WS001/risk"
 test_post "政务AI查询" "http://localhost:8086/api/govai/query" '{"query":"当前城市运行状态如何？"}'
 test_post "告警解释" "http://localhost:8086/api/govai/alert/explain" '{"type":"air_quality","city":"南京","value":150}'
 test_post "报告生成" "http://localhost:8086/api/govai/report/generate" '{"type":"daily","city":"南京"}'

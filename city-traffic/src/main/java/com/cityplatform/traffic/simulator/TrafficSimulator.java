@@ -2,11 +2,15 @@ package com.cityplatform.traffic.simulator;
 
 import com.cityplatform.traffic.model.SignalPhase;
 import com.cityplatform.traffic.model.TrafficFlowData;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+
+import static com.cityplatform.traffic.constant.TrafficSimulatorConstants.*;
 
 /**
  * 交通流模拟器
@@ -17,20 +21,8 @@ import java.util.List;
  * 服务率 mu = greenRatio * saturationFlow / 3600
  */
 @Component
+@Slf4j
 public class TrafficSimulator {
-
-    private static final Logger log = LoggerFactory.getLogger(TrafficSimulator.class);
-
-    // 饱和流量(辆/小时/车道)，默认值1800
-    private static final double DEFAULT_SATURATION_FLOW = 1800.0;
-    // 过饱和排队基座：M/D/1 在 rho=0.999 处的稳态队列长度，使过饱和段与稳态段平滑衔接
-    private static final double OVERFLOW_QUEUE_BASE = 499.0;
-    // 自由流速度(km/h)
-    private static final double FREE_FLOW_SPEED = 50.0;
-    // 车辆平均长度(m)
-    private static final double VEHICLE_LENGTH = 5.0;
-    // 最小车头间距(m)
-    private static final double MIN_HEADWAY = 2.0;
 
     /**
      * 模拟交通流
@@ -250,46 +242,15 @@ public class TrafficSimulator {
     /**
      * 模拟结果
      */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class SimulationResult {
+
         private double totalWaitTime;
         private double avgQueueLength;
         private double throughput;
         private double avgSpeed;
         private int stopCount;
-
-        public SimulationResult(double totalWaitTime, double avgQueueLength,
-                                double throughput, double avgSpeed, int stopCount) {
-            this.totalWaitTime = totalWaitTime;
-            this.avgQueueLength = avgQueueLength;
-            this.throughput = throughput;
-            this.avgSpeed = avgSpeed;
-            this.stopCount = stopCount;
-        }
-
-        public double getTotalWaitTime() { return totalWaitTime; }
-        public void setTotalWaitTime(double totalWaitTime) { this.totalWaitTime = totalWaitTime; }
-
-        public double getAvgQueueLength() { return avgQueueLength; }
-        public void setAvgQueueLength(double avgQueueLength) { this.avgQueueLength = avgQueueLength; }
-
-        public double getThroughput() { return throughput; }
-        public void setThroughput(double throughput) { this.throughput = throughput; }
-
-        public double getAvgSpeed() { return avgSpeed; }
-        public void setAvgSpeed(double avgSpeed) { this.avgSpeed = avgSpeed; }
-
-        public int getStopCount() { return stopCount; }
-        public void setStopCount(int stopCount) { this.stopCount = stopCount; }
-
-        @Override
-        public String toString() {
-            return "SimulationResult{" +
-                    "totalWaitTime=" + totalWaitTime +
-                    ", avgQueueLength=" + avgQueueLength +
-                    ", throughput=" + throughput +
-                    ", avgSpeed=" + avgSpeed +
-                    ", stopCount=" + stopCount +
-                    '}';
-        }
     }
 }

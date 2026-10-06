@@ -139,6 +139,25 @@ services:
       SPRING_DATASOURCE_USERNAME: cityuser
       SPRING_DATASOURCE_PASSWORD: citypass
 
+  disaster:
+    build: ./city-disaster
+    container_name: city-disaster
+    ports:
+      - "8088:8088"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
+      SPRING_DATASOURCE_USERNAME: cityuser
+      SPRING_DATASOURCE_PASSWORD: citypass
+
   govai:
     build: ./city-govai
     container_name: city-govai

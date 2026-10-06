@@ -18,6 +18,7 @@
         <module>city-energy</module>
         <module>city-environment</module>
         <module>city-water</module>
+        <module>city-disaster</module>
         <module>city-infra</module>
         <module>city-govai</module>
     </modules>

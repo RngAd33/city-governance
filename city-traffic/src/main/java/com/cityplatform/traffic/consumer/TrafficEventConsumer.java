@@ -5,8 +5,8 @@ import com.cityplatform.common.event.EventDomain;
 import com.cityplatform.common.mq.EventBusConfig;
 import com.cityplatform.common.util.JsonUtil;
 import com.cityplatform.traffic.service.TrafficDataWindow;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
@@ -17,15 +17,11 @@ import org.springframework.stereotype.Component;
  * 信号仿真由前端手动触发（/api/traffic/simulation/run），本消费者不执行自动优化
  */
 @Component
+@Slf4j
 public class TrafficEventConsumer {
 
-    private static final Logger log = LoggerFactory.getLogger(TrafficEventConsumer.class);
-
-    private final TrafficDataWindow dataWindow;
-
-    public TrafficEventConsumer(TrafficDataWindow dataWindow) {
-        this.dataWindow = dataWindow;
-    }
+    @Resource
+    private TrafficDataWindow dataWindow;
 
     /**
      * 监听交通流数据队列，仅累积窗口数据

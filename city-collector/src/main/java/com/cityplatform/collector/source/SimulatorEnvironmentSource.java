@@ -4,6 +4,7 @@ import com.cityplatform.collector.config.CollectorProperties;
 import com.cityplatform.common.event.CityEvent;
 import com.cityplatform.common.event.EventDomain;
 import com.cityplatform.common.event.EventSource;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -21,12 +22,10 @@ public class SimulatorEnvironmentSource implements EnvironmentDataSource {
 
     private static final String NAME = "simulator";
 
-    private final CollectorProperties properties;
-    private final Random random = new Random();
+    @Resource
+    private CollectorProperties properties;
 
-    public SimulatorEnvironmentSource(CollectorProperties properties) {
-        this.properties = properties;
-    }
+    private final Random random = new Random();
 
     @Override
     public String getName() {

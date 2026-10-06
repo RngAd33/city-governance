@@ -1,15 +1,12 @@
 package com.cityplatform.water.controller;
 
-import com.cityplatform.water.model.FloodScenario;
 import com.cityplatform.water.model.WaterLevelRecord;
 import com.cityplatform.water.model.WaterStation;
 import com.cityplatform.water.risk.DrainageAnalyzer;
-import com.cityplatform.water.risk.FloodRiskAssessor;
-import com.cityplatform.water.repository.FloodScenarioRepository;
 import com.cityplatform.water.repository.WaterLevelRecordRepository;
 import com.cityplatform.water.repository.WaterStationRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,32 +16,22 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 水务管理REST控制器
- * 提供水位监测、风险评估、灾害模拟等API
+ * 水务监测REST控制器
+ * 提供水位监测与排水能力分析API（灾害评估与模拟接口已迁移至 city-disaster）
  */
 @RestController
 @RequestMapping("/api/water")
+@Slf4j
 public class WaterController {
 
-    private static final Logger log = LoggerFactory.getLogger(WaterController.class);
+    @Resource
+    private WaterStationRepository waterStationRepository;
 
-    private final WaterStationRepository waterStationRepository;
-    private final WaterLevelRecordRepository waterLevelRecordRepository;
-    private final FloodScenarioRepository floodScenarioRepository;
-    private final FloodRiskAssessor floodRiskAssessor;
-    private final DrainageAnalyzer drainageAnalyzer;
+    @Resource
+    private WaterLevelRecordRepository waterLevelRecordRepository;
 
-    public WaterController(WaterStationRepository waterStationRepository,
-                           WaterLevelRecordRepository waterLevelRecordRepository,
-                           FloodScenarioRepository floodScenarioRepository,
-                           FloodRiskAssessor floodRiskAssessor,
-                           DrainageAnalyzer drainageAnalyzer) {
-        this.waterStationRepository = waterStationRepository;
-        this.waterLevelRecordRepository = waterLevelRecordRepository;
-        this.floodScenarioRepository = floodScenarioRepository;
-        this.floodRiskAssessor = floodRiskAssessor;
-        this.drainageAnalyzer = drainageAnalyzer;
-    }
+    @Resource
+    private DrainageAnalyzer drainageAnalyzer;
 
     /**
      * 获取水务系统整体状态
@@ -115,59 +102,6 @@ public class WaterController {
         result.put("recentRecords", records);
 
         return ResponseEntity.ok(result);
-    }
-
-    /**
-     * 获取指定站点的风险评估
-     */
-    @GetMapping("/stations/{id}/risk")
-    public ResponseEntity<FloodRiskAssessor.RiskAssessment> getRiskAssessment(
-            @PathVariable Long id,
-            @RequestParam(required = false, defaultValue = "0") double rainfallForecast,
-            @RequestParam(required = false, defaultValue = "24") int forecastHours) {
-
-        WaterStation station = waterStationRepository.findById(id)
-                .orElse(null);
-
-        if (station == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        FloodRiskAssessor.RiskAssessment assessment = floodRiskAssessor.assessRisk(
-                station, station.getCurrentLevel(), rainfallForecast, forecastHours);
-
-        return ResponseEntity.ok(assessment);
-    }
-
-    /**
-     * 运行洪涝模拟
-     */
-    @PostMapping("/simulate")
-    public ResponseEntity<FloodScenario> runSimulation(@RequestBody Map<String, Object> request) {
-        String stationId = (String) request.get("stationId");
-        Double rainfallMm = ((Number) request.get("rainfallMm")).doubleValue();
-        Integer durationHours = ((Number) request.get("durationHours")).intValue();
-
-        WaterStation station = waterStationRepository.findByStationId(stationId)
-                .orElse(null);
-
-        if (station == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        FloodScenario scenario = floodRiskAssessor.simulateFloodScenario(
-                station, rainfallMm, durationHours);
-
-        return ResponseEntity.ok(scenario);
-    }
-
-    /**
-     * 获取所有洪涝模拟场景
-     */
-    @GetMapping("/scenarios")
-    public ResponseEntity<List<FloodScenario>> getAllScenarios() {
-        List<FloodScenario> scenarios = floodScenarioRepository.findAll();
-        return ResponseEntity.ok(scenarios);
     }
 
     /**

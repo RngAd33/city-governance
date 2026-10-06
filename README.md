@@ -9,11 +9,12 @@
         ↓
 Java 数据采集与清洗服务 (city-collector)
         ↓
-RabbitMQ 城市事件总线 (8个队列)
+RabbitMQ 城市事件总线 (12个队列)
         ↓
 ┌──────────────────────────────────────────┐
 │  交通优化服务  │  能耗分析服务            │
-│  环境监测服务  │  水务风险服务            │
+│  环境监测服务  │  水务监测服务            │
+│  灾害模拟服务  │  基础设施运维服务        │
 │  政务AI决策服务（本地LLM + RAG）         │
 └──────────────────────────────────────────┘
         ↓
@@ -30,8 +31,10 @@ MySQL + Redis + 向量库
 | city-traffic | 8082 | 交通信号配时优化（遗传算法） |
 | city-energy | 8083 | 能耗分析与建筑节能 |
 | city-environment | 8084 | 环境监测与告警 |
-| city-water | 8085 | 水务风险与灾害模拟 |
+| city-water | 8085 | 水务监测与排水分析 |
+| city-disaster | 8088 | 灾害风险评估与模拟推演 |
 | city-govai | 8086 | 政务AI决策（LLM+RAG） |
+| city-infra | 8087 | 基础设施运维监控 |
 
 ## 快速启动
 
@@ -60,6 +63,7 @@ cd city-traffic && mvn spring-boot:run
 cd city-energy && mvn spring-boot:run
 cd city-environment && mvn spring-boot:run
 cd city-water && mvn spring-boot:run
+cd city-disaster && mvn spring-boot:run
 cd city-govai && mvn spring-boot:run
 ```
 
@@ -72,8 +76,12 @@ cd city-govai && mvn spring-boot:run
 | traffic.flow.queue | traffic.flow.segment | 交通流数据 |
 | traffic.signal.queue | traffic.signal.optimization | 信号配时优化结果 |
 | energy.building.queue | energy.building.consumption | 建筑能耗数据 |
+| energy.grid.queue | energy.grid.indicator | 电网指标数据 |
 | water.monitor.queue | water.level.station | 水位/渍水数据 |
+| water.flood.queue | water.flood.forecast | 长江径流量预报（GloFAS） |
+| disaster.water.queue | water.level.station | 灾害触发（水位事件独立副本） |
 | disaster.sim.queue | disaster.flood.scenario | 灾害模拟事件 |
+| infra.monitor.queue | infra.facility.status | 基础设施状态 |
 | govai.decision.queue | govai.decision.suggest | 政务AI决策建议 |
 
 ## API 接口
@@ -105,22 +113,33 @@ cd city-govai && mvn spring-boot:run
 - `POST /api/environment/alerts/{id}/acknowledge` - 确认告警
 - `GET /api/environment/trends` - 趋势分析
 
-### 水务风险服务 (city-water)
+### 水务监测服务 (city-water)
 - `GET /api/water/status` - 服务状态
 - `GET /api/water/stations` - 监测站列表
 - `GET /api/water/stations/{id}/level` - 当前水位
-- `GET /api/water/stations/{id}/risk` - 风险评估
-- `POST /api/water/simulate` - 洪涝模拟
-- `GET /api/water/scenarios` - 灾害场景
 - `GET /api/water/drainage/analysis` - 排水分析
+
+### 灾害模拟服务 (city-disaster)
+- `GET /api/disaster/current` - 当前灾害态势
+- `POST /api/disaster/simulate` - 灾害情景模拟
+- `GET /api/disaster/scenarios` - 历史灾害场景
+- `GET /api/disaster/stations/{id}/risk` - 站点风险评估
 
 ### 政务AI决策服务 (city-govai)
 - `GET /api/govai/status` - 服务状态
 - `POST /api/govai/query` - 自然语言查询
 - `POST /api/govai/alert/explain` - 告警解释
 - `POST /api/govai/report/generate` - 报告生成
+- `GET /api/govai/report/list` - 报告列表
+- `GET /api/govai/report/{id}` - 报告详情
+- `GET /api/govai/report/{id}/pdf` - 报告 PDF 导出
 - `POST /api/govai/plan/retrieve` - 预案检索
 - `GET /api/govai/knowledge/search` - 知识库搜索
+
+### 基础设施运维服务 (city-infra)
+- `GET /api/infra/status` - 设施实时状态总览
+- `GET /api/infra/history` - 设施状态评分趋势（>48h 窗口按小时降采样）
+- `GET /api/infra/work-orders` - 运维工单列表
 
 ## 核心算法
 

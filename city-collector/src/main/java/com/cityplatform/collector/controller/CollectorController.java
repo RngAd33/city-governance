@@ -4,10 +4,10 @@ import com.cityplatform.collector.entity.EventRecord;
 import com.cityplatform.collector.repository.EventRecordRepository;
 import com.cityplatform.collector.simulator.DataSimulatorService;
 import com.cityplatform.collector.source.EnergyGridCollectionService;
+import com.cityplatform.collector.source.FloodCollectionService;
+import com.cityplatform.collector.source.WaterLevelCollectionService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,6 +32,12 @@ public class CollectorController {
 
     @Resource
     private EnergyGridCollectionService energyGridCollectionService;
+
+    @Resource
+    private FloodCollectionService floodCollectionService;
+
+    @Resource
+    private WaterLevelCollectionService waterLevelCollectionService;
 
     /**
      * 获取服务状态
@@ -119,5 +125,48 @@ public class CollectorController {
             result.put("timestamp", OffsetDateTime.now().toString());
             return ResponseEntity.ok(result);
         }
+    }
+
+    /**
+     * 洪水预报与站点水位采集状态（真实数据源：Open-Meteo GloFAS + 南京站点）
+     */
+    @GetMapping("/water/status")
+    public ResponseEntity<Map<String, Object>> getWaterCollectionStatus() {
+        Map<String, Object> result = new HashMap<>();
+        result.put("timestamp", OffsetDateTime.now().toString());
+        result.put("floodSources", floodCollectionService.getStatuses());
+        result.put("waterRuntime", waterLevelCollectionService.getRuntimeStatus());
+        result.put("stations", waterLevelCollectionService.getStationStatuses());
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 手动触发一轮洪水预报 + 站点水位采集（先采径流量再推算水位）
+     */
+    @PostMapping("/water/fetch")
+    public ResponseEntity<Map<String, Object>> triggerWaterFetch() {
+        log.info("手动触发洪水/水位数据采集请求");
+        Map<String, Object> result = new HashMap<>();
+        try {
+            int floodCount = floodCollectionService.triggerCollect();
+            result.put("floodEventCount", floodCount);
+        } catch (Exception e) {
+            log.warn("洪水预报采集失败: {}", e.getMessage());
+            result.put("floodEventCount", 0);
+            result.put("floodError", e.getMessage());
+        }
+        try {
+            int waterCount = waterLevelCollectionService.triggerCollect();
+            result.put("waterEventCount", waterCount);
+            result.put("success", true);
+            result.put("message", "洪水/水位数据采集完成");
+        } catch (Exception e) {
+            log.warn("站点水位采集失败: {}", e.getMessage());
+            result.put("waterEventCount", 0);
+            result.put("success", false);
+            result.put("message", "站点水位采集失败: " + e.getMessage());
+        }
+        result.put("timestamp", OffsetDateTime.now().toString());
+        return ResponseEntity.ok(result);
     }
 }

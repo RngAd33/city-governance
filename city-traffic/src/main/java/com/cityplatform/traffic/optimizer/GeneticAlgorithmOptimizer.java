@@ -2,8 +2,7 @@ package com.cityplatform.traffic.optimizer;
 
 import com.cityplatform.traffic.model.SignalPhase;
 import com.cityplatform.traffic.model.TrafficFlowData;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -16,10 +15,9 @@ import java.util.stream.Collectors;
  * 适应度函数：最小化总等待时间（M/D/1 排队模型，与 TrafficSimulator 同口径） + 约束惩罚
  * 约束条件：最小绿灯时间 >= 10s, 最大周期 <= 180s, 行人最小绿灯 >= 15s
  */
+@Slf4j
 @Component
 public class GeneticAlgorithmOptimizer {
-
-    private static final Logger log = LoggerFactory.getLogger(GeneticAlgorithmOptimizer.class);
 
     // 遗传算法参数
     private static final int POPULATION_SIZE = 50;

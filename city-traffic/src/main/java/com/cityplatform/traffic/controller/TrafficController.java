@@ -11,8 +11,6 @@ import com.cityplatform.traffic.simulator.TrafficSimulator;
 import com.cityplatform.traffic.entity.OptimizationRecord;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,13 +32,13 @@ public class TrafficController {
     private TrafficSimulator simulator;
 
     @Resource
-    private OptimizationRecordRepository optimizationRecordRepository;
-
-    @Resource
     private TrafficDataWindow dataWindow;
 
     @Resource
     private SignalOptimizationService signalOptimizationService;
+
+    @Resource
+    private OptimizationRecordRepository optimizationRecordRepository;
 
     // 存储最近的模拟运行记录
     private final List<TrafficSimulator.SimulationResult> recentSimulations = new ArrayList<>();
@@ -205,11 +203,8 @@ public class TrafficController {
      * 运行前后对比模拟
      */
     @PostMapping("/simulation/compare")
-    public ResponseEntity<Map<String, Object>> compareSimulation(
-            @RequestBody Map<String, Object> request) {
-
+    public ResponseEntity<Map<String, Object>> compareSimulation(@RequestBody Map<String, Object> request) {
         log.info("收到模拟对比请求");
-
         try {
             // 解析请求中的相位配置
             List<Map<String, Object>> beforePhasesData =

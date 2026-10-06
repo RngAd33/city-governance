@@ -2,6 +2,9 @@ package com.cityplatform.traffic.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
@@ -9,10 +12,13 @@ import java.time.LocalDateTime;
  * 交通流数据模型
  * 记录各路段的交通流量、速度和排队长度
  */
+@Data
+@NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class TrafficFlowData {
 
     private String segmentId;
+
     private String intersectionId;
     /** 行驶方向：NS(南北) 或 EW(东西) */
     private String direction;
@@ -26,8 +32,9 @@ public class TrafficFlowData {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime timestamp;
 
-    public TrafficFlowData() {}
-
+    /**
+     * 业务便利构造器：采集时间自动填充为当前时间
+     */
     public TrafficFlowData(String segmentId, String intersectionId, String direction,
                           double flow, double avgSpeed, double queueLength) {
         this.segmentId = segmentId;
@@ -39,38 +46,4 @@ public class TrafficFlowData {
         this.timestamp = LocalDateTime.now();
     }
 
-    // Getters and Setters
-    public String getSegmentId() { return segmentId; }
-    public void setSegmentId(String segmentId) { this.segmentId = segmentId; }
-
-    public String getIntersectionId() { return intersectionId; }
-    public void setIntersectionId(String intersectionId) { this.intersectionId = intersectionId; }
-
-    public String getDirection() { return direction; }
-    public void setDirection(String direction) { this.direction = direction; }
-
-    public double getFlow() { return flow; }
-    public void setFlow(double flow) { this.flow = flow; }
-
-    public double getAvgSpeed() { return avgSpeed; }
-    public void setAvgSpeed(double avgSpeed) { this.avgSpeed = avgSpeed; }
-
-    public double getQueueLength() { return queueLength; }
-    public void setQueueLength(double queueLength) { this.queueLength = queueLength; }
-
-    public LocalDateTime getTimestamp() { return timestamp; }
-    public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
-
-    @Override
-    public String toString() {
-        return "TrafficFlowData{" +
-                "segmentId='" + segmentId + '\'' +
-                ", intersectionId='" + intersectionId + '\'' +
-                ", direction='" + direction + '\'' +
-                ", flow=" + flow +
-                ", avgSpeed=" + avgSpeed +
-                ", queueLength=" + queueLength +
-                ", timestamp=" + timestamp +
-                '}';
-    }
 }

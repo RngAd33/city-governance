@@ -3,10 +3,10 @@ package com.cityplatform.govai.consumer;
 import com.cityplatform.common.event.CityEvent;
 import com.cityplatform.common.util.JsonUtil;
 import com.cityplatform.govai.ai.LocalLLMService;
-import com.cityplatform.govai.entity.DecisionRecord;
+import com.cityplatform.govai.model.entity.DecisionRecord;
 import com.cityplatform.govai.repository.DecisionRecordRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
@@ -16,18 +16,14 @@ import org.springframework.stereotype.Component;
  * 使用LLM服务分析事件并生成决策支持信息
  */
 @Component
+@Slf4j
 public class DecisionConsumer {
 
-    private static final Logger log = LoggerFactory.getLogger(DecisionConsumer.class);
+    @Resource
+    private LocalLLMService llmService;
 
-    private final LocalLLMService llmService;
-    private final DecisionRecordRepository decisionRecordRepository;
-
-    public DecisionConsumer(LocalLLMService llmService,
-                             DecisionRecordRepository decisionRecordRepository) {
-        this.llmService = llmService;
-        this.decisionRecordRepository = decisionRecordRepository;
-    }
+    @Resource
+    private DecisionRecordRepository decisionRecordRepository;
 
     /**
      * 监听决策建议队列

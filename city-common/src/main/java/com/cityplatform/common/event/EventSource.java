@@ -1,8 +1,13 @@
 package com.cityplatform.common.event;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
 /**
  * 数据源枚举
  */
+@Getter
+@AllArgsConstructor
 public enum EventSource {
     OPEN_METEO("open-meteo", "Open-Meteo气象API"),
     OPENAQ("openaq", "OpenAQ空气质量API"),
@@ -14,12 +19,4 @@ public enum EventSource {
 
     private final String code;
     private final String description;
-
-    EventSource(String code, String description) {
-        this.code = code;
-        this.description = description;
-    }
-
-    public String getCode() { return code; }
-    public String getDescription() { return description; }
 }

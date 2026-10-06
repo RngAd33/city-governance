@@ -37,6 +37,10 @@ echo "启动 city-water..."
 docker-compose up -d water
 sleep 5
 
+echo "启动 city-disaster..."
+docker-compose up -d disaster
+sleep 5
+
 echo "启动 city-govai..."
 docker-compose up -d govai
 sleep 5

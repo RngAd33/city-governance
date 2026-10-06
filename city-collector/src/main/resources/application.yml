@@ -27,8 +27,8 @@ spring:
   task:
     scheduling:
       pool:
-        # 模拟器、两类环境采集与中国OWID数据采集任务并行调度
-        size: 4
+        # 模拟器、两类环境采集、中国OWID数据采集、洪水预报与站点水位采集任务并行调度
+        size: 5
 
 # 采集服务配置
 collector:
@@ -66,6 +66,14 @@ collector:
       enabled: true
       base-url: https://ourworldindata.org/grapher
       timeout-ms: 30000
+    # Open-Meteo 洪水预报API（GloFAS全球洪水模型，免费开放无需密钥；
+    # 提供长江南京段真实径流量（含7天预报），采样点取南京长江大桥江段）
+    open-meteo-flood:
+      enabled: true
+      base-url: https://flood-api.open-meteo.com/v1/flood
+      latitude: 32.116
+      longitude: 118.736
+      timeout-ms: 10000
   environment:
     # 启动后首次采集延迟（毫秒）
     initial-delay-ms: 30000
@@ -78,6 +86,74 @@ collector:
     china-interval-ms: 86400000
     # 中国OWID首次采集延迟（毫秒）
     china-initial-delay-ms: 60000
+  flood:
+    # 长江径流量采集间隔（毫秒，默认1小时；GloFAS为日粒度预报）
+    interval-ms: 3600000
+    # 首次采集延迟（毫秒）
+    initial-delay-ms: 60000
+  water:
+    # 南京站点水位采集间隔（毫秒，默认10分钟，与气象采集同频）
+    interval-ms: 600000
+    # 首次采集延迟（毫秒，晚于洪水预报首采）
+    initial-delay-ms: 90000
+    # 长江径流量参照值（m³/s，用于水位径流调节项）
+    river-reference-discharge: 30000
+    # 南京水文站点（与 water_station 种子一致；水位由真实降水+长江径流量经水量平衡模型推算）
+    stations:
+      - id: WS001
+        name: 长江大桥水文站
+        type: RIVER
+        latitude: 32.06
+        longitude: 118.79
+        baseline-level: 2.8
+        max-level: 8.0
+        catchment-factor: 1.2
+        recession-rate: 0.015
+      - id: WS002
+        name: 玄武湖监测站
+        type: LAKE
+        latitude: 32.07
+        longitude: 118.78
+        baseline-level: 1.9
+        max-level: 5.0
+        catchment-factor: 1.8
+        recession-rate: 0.02
+      - id: WS003
+        name: 秦淮河入江口
+        type: RIVER
+        latitude: 32.05
+        longitude: 118.8
+        baseline-level: 2.2
+        max-level: 7.0
+        catchment-factor: 1.5
+        recession-rate: 0.02
+      - id: WS004
+        name: 莫愁湖监测站
+        type: LAKE
+        latitude: 32.04
+        longitude: 118.81
+        baseline-level: 1.5
+        max-level: 4.0
+        catchment-factor: 1.4
+        recession-rate: 0.025
+      - id: WS005
+        name: 雨花台排水站
+        type: DRAINAGE
+        latitude: 32.03
+        longitude: 118.82
+        baseline-level: 0.8
+        max-level: 3.5
+        catchment-factor: 1.0
+        recession-rate: 0.08
+      - id: WS006
+        name: 紫金山水库
+        type: RESERVOIR
+        latitude: 32.08
+        longitude: 118.77
+        baseline-level: 3.2
+        max-level: 10.0
+        catchment-factor: 2.2
+        recession-rate: 0.008
 
 logging:
   level:

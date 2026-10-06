@@ -2,8 +2,8 @@ package com.cityplatform.collector.controller;
 
 import com.cityplatform.collector.source.DataCategory;
 import com.cityplatform.collector.source.EnvironmentCollectionService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,17 +17,13 @@ import java.util.Map;
  * 环境数据源管理接口
  * 提供数据源列表查询与手动触发采集能力
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/collector/sources")
 public class EnvironmentSourceController {
 
-    private static final Logger log = LoggerFactory.getLogger(EnvironmentSourceController.class);
-
-    private final EnvironmentCollectionService collectionService;
-
-    public EnvironmentSourceController(EnvironmentCollectionService collectionService) {
-        this.collectionService = collectionService;
-    }
+    @Resource
+    private EnvironmentCollectionService collectionService;
 
     /**
      * 查询所有环境数据源及运行状态

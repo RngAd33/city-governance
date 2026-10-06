@@ -1,8 +1,13 @@
 package com.cityplatform.environment.model.enums;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
 /**
  * 告警规则比较运算符枚举
  */
+@Getter
+@AllArgsConstructor
 public enum Operator {
     GT(">"),
     LT("<"),
@@ -10,12 +15,6 @@ public enum Operator {
     LTE("<=");
 
     private final String symbol;
-
-    Operator(String symbol) {
-        this.symbol = symbol;
-    }
-
-    public String getSymbol() { return symbol; }
 
     /**
      * 根据运算符比较两个值

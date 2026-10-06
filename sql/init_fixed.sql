@@ -359,15 +359,12 @@ DROP TABLE IF EXISTS decision_record;
 
 CREATE TABLE decision_record (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    record_id VARCHAR(64) NOT NULL UNIQUE COMMENT '记录ID',
-    query_type VARCHAR(32) NOT NULL COMMENT '查询类型: CHAT/ALERT_EXPLAIN/REPORT/PLAN',
-    input_text TEXT NOT NULL COMMENT '输入内容',
-    output_text TEXT NOT NULL COMMENT '输出内容',
-    confidence DOUBLE DEFAULT 0.8 COMMENT '置信度',
-    sources JSON COMMENT '依据来源',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    query_type VARCHAR(50) NOT NULL COMMENT '查询类型: natural_language_query/alert_explanation/report_generation/plan_retrieval/decision_suggestion',
+    input TEXT NOT NULL COMMENT '输入内容',
+    output TEXT COMMENT '输出内容',
+    confidence DOUBLE COMMENT '置信度',
+    created_at DATETIME(6) NOT NULL COMMENT '创建时间',
     INDEX idx_query_type (query_type),
-    INDEX idx_record_id (record_id),
     INDEX idx_created_at (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI决策记录表';
 
@@ -413,6 +410,55 @@ CREATE TABLE emergency_plans (
     INDEX idx_plan_id (plan_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='应急预案表';
 
+-- 6.4 对话会话表
+
+DROP TABLE IF EXISTS chat_session;
+
+CREATE TABLE chat_session (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    session_id VARCHAR(64) NOT NULL UNIQUE COMMENT '会话ID',
+    title VARCHAR(128) NOT NULL COMMENT '会话标题',
+    message_count INT NOT NULL DEFAULT 0 COMMENT '消息数',
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    INDEX idx_updated_at (updated_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI对话会话表';
+
+-- 6.5 对话消息表
+
+DROP TABLE IF EXISTS chat_message;
+
+CREATE TABLE chat_message (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    session_id VARCHAR(64) NOT NULL COMMENT '会话ID',
+    role VARCHAR(16) NOT NULL COMMENT '角色: user/assistant/system',
+    content TEXT NOT NULL COMMENT '消息内容',
+    knowledge_hits VARCHAR(1024) COMMENT 'RAG命中的知识条目标题(分号分隔)',
+    provider VARCHAR(64) COMMENT '模型提供方',
+    seq INT NOT NULL COMMENT '会话内消息序号',
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    INDEX idx_session_seq (session_id, seq),
+    INDEX idx_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI对话消息表';
+
+-- 6.6 政务报告表
+
+DROP TABLE IF EXISTS govai_report;
+
+CREATE TABLE govai_report (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(256) NOT NULL COMMENT '报告标题',
+    type VARCHAR(32) NOT NULL COMMENT '报告类型: 日报/周报/简报/风险提示',
+    city VARCHAR(64) COMMENT '城市',
+    period VARCHAR(64) COMMENT '报告周期',
+    author VARCHAR(64) COMMENT '作者',
+    status VARCHAR(16) DEFAULT 'COMPLETED' COMMENT '状态: COMPLETED/FAILED',
+    content TEXT COMMENT '报告正文(Markdown)',
+    created_at DATETIME(6) NOT NULL COMMENT '创建时间',
+    INDEX idx_type (type),
+    INDEX idx_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='政务报告表';
+
 -- ============================================================
 -- 7. 基础设施运维模块 (city-infra)
 -- ============================================================
@@ -452,6 +498,7 @@ CREATE TABLE work_orders (
     status VARCHAR(16) DEFAULT 'PENDING' COMMENT '状态: PENDING/IN_PROGRESS/COMPLETED/CANCELLED',
     assigned_dept VARCHAR(128) COMMENT '分配部门',
     assigned_person VARCHAR(64) COMMENT '分配人员',
+    progress TINYINT NOT NULL DEFAULT 0 COMMENT '处理进度百分比 0-100',
     due_date DATE COMMENT '截止日期',
     completed_at DATETIME COMMENT '完成时间',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -519,17 +566,17 @@ INSERT INTO alert_thresholds (metric, warning_value, danger_value, unit) VALUES
     ('electricity', 5000, 8000, 'kWh'),
     ('congestion_index', 6, 8, 'level');
 
--- 9.2 初始化示例建筑
+-- 9.2 初始化示例建筑（南京真实地标：规模参数取自公开资料，日均能耗 = 建筑面积 × 行业能耗强度，参考知识库 STD-003）
 
 INSERT INTO buildings (building_id, name, type, area, floors, build_year, lat, lng, avg_daily_consumption, carbon_factor) VALUES
-    ('B001', '市政服务中心', 'OFFICE', 50000, 12, 2010, 32.0600, 118.7900, 3500, 0.58),
-    ('B002', '第一人民医院', 'HOSPITAL', 120000, 20, 2005, 32.0500, 118.8000, 8000, 0.58),
-    ('B003', '中央商务区A座', 'COMMERCIAL', 80000, 30, 2015, 32.0700, 118.7800, 5500, 0.58),
-    ('B004', '阳光花园小区', 'RESIDENTIAL', 60000, 18, 2008, 32.0400,118.8100, 2000, 0.58),
-    ('B005', '科技园区办公楼', 'OFFICE', 45000, 10, 2018, 32.0800, 118.7700, 2800, 0.58),
-    ('B006', '大学城图书馆', 'SCHOOL', 30000, 5, 2012, 32.0300, 118.8200, 1500, 0.58),
-    ('B007', '国际会议中心', 'COMMERCIAL', 70000, 8, 2016, 32.0650, 118.7950, 4200, 0.58),
-    ('B008', '老年活动中心', 'OFFICE', 15000, 3, 2000, 32.0550, 118.8050, 800, 0.58);
+    ('B001', '南京市政务服务中心', 'OFFICE', 28000, 2, 2010, 32.0435, 118.7295, 6100, 0.58),
+    ('B002', '江苏省人民医院', 'HOSPITAL', 480000, 20, 1936, 32.0536, 118.7700, 197300, 0.58),
+    ('B003', '德基广场', 'COMMERCIAL', 313000, 48, 2012, 32.0422, 118.7843, 102900, 0.58),
+    ('B004', '仁恒江湾城', 'RESIDENTIAL', 740000, 33, 2016, 32.0085, 118.7340, 70900, 0.58),
+    ('B005', '紫峰大厦', 'OFFICE', 261075, 89, 2010, 32.0603, 118.7770, 71500, 0.58),
+    ('B006', '南京外国语学校', 'SCHOOL', 136506, 7, 1963, 32.0578, 118.7968, 20600, 0.58),
+    ('B007', '南京国际博览中心', 'COMMERCIAL', 360000, 1, 2008, 32.0348, 118.7245, 78900, 0.58),
+    ('B008', '南京人民大会堂', 'OFFICE', 12000, 5, 1936, 32.0449, 118.7936, 3000, 0.58);
 
 -- 9.3 初始化示例水位站
 
@@ -564,4 +611,26 @@ INSERT INTO knowledge_items (item_id, title, category, content, keywords, source
     ('KB008', '城市运行日报模板', 'REPORT', '城市运行日报应包含：1. 环境空气质量；2. 交通运行状况；3. 能源消耗情况；4. 水务运行状态；5. 基础设施运维情况；6. 重大事件记录。', '日报,城市运行,报告', '市城市管理局', 6, 1),
     ('KB009', '洪涝灾害风险评估', 'DISASTER', '洪涝风险评估要素：1. 降雨量及持续时间；2. 地形高程；3. 排水能力；4. 历史积水记录；5. 人口密度。', '洪涝,风险,评估,降雨', '市应急管理局', 8, 1),
     ('KB010', '多部门协同处置流程', 'EMERGENCY', '多部门协同处置：1. 统一指挥调度；2. 信息共享互通；3. 资源统筹调配；4. 行动协调一致；5. 效果评估反馈。', '协同,处置,指挥,调度', '市应急管理局', 9, 1);
+
+-- 9.6 扩充政务知识库（法规/应急预案/调度规则/技术标准，与运行时RAG检索一致）
+
+INSERT INTO knowledge_items (item_id, title, category, content, keywords, source, priority, enabled) VALUES
+    ('REG-001', '《城市空气质量污染防治条例》', 'regulation', '当AQI超过150时，启动橙色预警，建议减少户外施工和机动车出行；当AQI超过200时，启动红色预警，实施机动车单双号限行，暂停重污染企业生产。', 'AQI,空气质量,污染,预警,限行,排放', '市生态环境局', 10, 1),
+    ('REG-002', '《城市供水应急预案管理办法》', 'regulation', '当水位超过警戒水位1.5米时，启动三级防汛响应；当水位超过警戒水位2.5米时，启动二级防汛响应，组织低洼地区居民转移。', '水位,警戒水位,防汛,供水,应急,转移', '市水务局', 10, 1),
+    ('REG-003', '《城市交通管理条例》', 'regulation', '高峰时段主干道平均车速低于20km/h时，实施交通分流措施；拥堵指数超过8.0时，启动交通管制，限制货车进入核心区。', '交通,拥堵,分流,管制,货车,高峰', '市交通管理局', 9, 1),
+    ('REG-004', '《公共建筑节能管理办法》', 'regulation', '办公建筑单位面积能耗超过80kWh/㎡·年时，需进行能源审计；超过120kWh/㎡·年时，强制实施节能改造。', '建筑,节能,能耗,能源审计,限额', '市住建局', 8, 1),
+    ('REG-005', '《城市突发事件应对条例》', 'regulation', '突发事件按照影响范围分为四级：一般（IV级）、较大（III级）、重大（II级）、特别重大（I级）。各级别对应不同的响应机制和资源调配方案。', '突发事件,分级,响应,应急管理', '市应急管理局', 9, 1),
+    ('PLAN-001', '城市防洪应急预案', 'emergency_plan', '适用于城市范围内因暴雨、洪水引发的洪涝灾害。响应流程：监测预警→会商研判→启动响应→抢险救援→灾后恢复。关键措施：开启排水泵站、疏散低洼地区群众、加固堤防、预置抢险物资。', '防洪,暴雨,洪水,内涝,排水,抢险', '市防汛抗旱指挥部', 10, 1),
+    ('PLAN-002', '交通事故应急处置预案', 'emergency_plan', '适用于城市主干道、高速公路发生的重大交通事故。响应流程：接警→现场勘查→交通疏导→事故处理→恢复通行。关键措施：启动无人机勘查、实施临时交通管制、开辟应急救援通道。', '交通事故,处置,疏导,管制,救援', '市交通管理局', 9, 1),
+    ('PLAN-003', '大气污染应急响应预案', 'emergency_plan', '适用于AQI持续超过150的重污染天气。响应流程：监测预报→预警发布→应急响应→措施落实→效果评估。关键措施：工业企业限产、机动车限行、停止露天作业、加强道路保洁。', '大气污染,重污染,AQI,应急响应,限产', '市生态环境局', 9, 1),
+    ('PLAN-004', '大面积停电应急预案', 'emergency_plan', '适用于因设备故障、自然灾害导致的大面积停电事故。响应流程：故障定位→负荷转移→抢修恢复→善后处理。关键措施：优先保障医院、交通信号、供水等关键设施供电。', '停电,供电,故障,抢修,应急预案', '市供电公司', 8, 1),
+    ('RULE-001', '交通信号配时调度规则', 'dispatch_rule', '信号周期时长应在60-180秒之间；主干道绿波协调带宽应达到周期时长的40%-60%；行人过街最短绿灯时间不小于15秒；公交优先信号延迟不超过10秒。', '信号,配时,绿波,公交优先,周期', '市交通研究中心', 9, 1),
+    ('RULE-002', '排水泵站调度规则', 'dispatch_rule', '当降雨量达到10mm/h时，预降管网水位；当降雨量达到20mm/h时，开启全部排水泵站；当管网水位达到警戒线时，启动应急排水方案；泵站运行优先级：下穿隧道>低洼路段>一般路段。', '排水,泵站,调度,降雨,管网', '市排水管理处', 8, 1),
+    ('RULE-003', '重污染天气减排调度规则', 'dispatch_rule', '橙色预警期间：涉气企业减排30%，停止土石方作业；红色预警期间：涉气企业减排50%，机动车单双号限行，停止所有露天施工。', '重污染,减排,橙色预警,红色预警,限行', '市生态环境局', 8, 1),
+    ('RULE-004', '城市排水防涝调度规则', 'dispatch_rule', '排水管网设计标准：一般地区1年一遇，重要地区3年一遇，地下通道5年一遇。泵站排水能力：应满足设计重现期降雨量的排放需求。应急响应：积水深度超过30cm时封闭交通，超过50cm时强制疏散。调度原则：高水高排、低水低排、分区排水、系统调度。', '排水防涝,积水,封闭,疏解,设计标准', '市排水管理处', 8, 1),
+    ('RULE-005', '河道水位调度规则', 'dispatch_rule', '正常水位：低于警戒水位1.0米以上。警戒水位：启动巡查，预置抢险物资。保证水位：全力抢险，组织转移。调度原则：上下游统筹、蓄泄兼顾、确保重点。', '河道,水位,警戒,抢险,调度', '市水务局', 8, 1),
+    ('STD-001', '城市道路信号配时设计标准', 'standard', '交叉口信号周期：主干道60-150秒，次干道40-100秒，支路30-60秒。相位差协调：相邻交叉口相位差应满足绿波带设计要求。黄灯时间：3-4秒；全红时间：1-3秒。左转保护相位：当左转流量超过200pcu/h时设置。', '信号周期,相位,黄灯,左转,设计标准', '市交通设计研究院', 8, 1),
+    ('STD-002', '公交信号优先技术标准', 'standard', '公交优先策略：绿灯延长、红灯早断、相位插入。公交检测器布设距离：距停止线80-150米。优先响应时间：检测到公交车辆后5秒内调整信号。社会车辆影响：优先相位对社会车辆延误增加不超过15%。', '公交优先,绿灯延长,检测器,优先响应', '市交通研究中心', 7, 1),
+    ('STD-003', '公共建筑能耗限额标准', 'standard', '办公建筑：60-100 kWh/㎡·年。商业建筑：80-150 kWh/㎡·年。医疗建筑：120-200 kWh/㎡·年。教育建筑：40-80 kWh/㎡·年。超过限额20%时需进行能源审计和节能改造。', '能耗限额,办公建筑,商业建筑,节能改造', '市住建局', 8, 1),
+    ('STD-004', '建筑能耗监测标准', 'standard', '能耗监测数据上传频率：每15分钟一次。分项计量：照明、空调、动力、特殊用电应分别计量。数据质量：采集准确率不低于95%。异常告警：能耗突增超过30%时触发告警。', '能耗监测,分项计量,告警,数据质量', '市住建局', 7, 1);
 

@@ -1,8 +1,7 @@
 package com.cityplatform.collector.source;
 
 import com.cityplatform.common.event.CityEvent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -14,10 +13,9 @@ import java.util.Map;
  * 对采集数据进行清洗：过滤缺失值与超出合理范围的异常值
  * （覆盖环境监测指标与电网指标）
  */
+@Slf4j
 @Component
 public class DataQualityValidator {
-
-    private static final Logger log = LoggerFactory.getLogger(DataQualityValidator.class);
 
     /**
      * 各指标合理取值范围 [最小值, 最大值]（单位统一后的口径，其中 CO 为 mg/m³）
@@ -33,11 +31,12 @@ public class DataQualityValidator {
             Map.entry("o3", new double[]{0, 2000}),
             Map.entry("co", new double[]{0, 100}),
             Map.entry("so2", new double[]{0, 5000}),
-            // 电网指标（Electricity Maps，中国为国家级CN区域估算值）
+            // 电网指标（OWID 中国年度：碳强度与可再生占比）
             Map.entry("grid_carbon_intensity", new double[]{0, 2000}),
             Map.entry("grid_renewable_percentage", new double[]{0, 100}),
-            Map.entry("grid_fossil_free_percentage", new double[]{0, 100}),
-            Map.entry("grid_power_consumption", new double[]{0, 3_000_000})
+            // 水文指标（长江径流量与站点水位，水位事件metric形如"WS001:water_level"）
+            Map.entry("river_discharge", new double[]{0, 200_000}),
+            Map.entry("water_level", new double[]{0, 30})
     );
 
     /**
@@ -65,7 +64,12 @@ public class DataQualityValidator {
         if (event == null || event.getMetric() == null || event.getValue() == null) return false;
         if (event.getValue().isNaN() || event.getValue().isInfinite()) return false;
 
-        double[] range = METRIC_RANGES.get(event.getMetric());
+        // 站点事件metric形如"WS001:water_level"，取冒号后基础指标名查范围
+        String metric = event.getMetric();
+        int idx = metric.indexOf(':');
+        if (idx >= 0) metric = metric.substring(idx + 1);
+
+        double[] range = METRIC_RANGES.get(metric);
         if (range == null) return true;
         return event.getValue() >= range[0] && event.getValue() <= range[1];
     }

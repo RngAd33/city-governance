@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 /**
  * RabbitMQ城市事件总线配置
  * 主题交换机：city.event.topic
- * 10个队列对应10类城市事件
+ * 12个队列对应12类城市事件
  */
 @Configuration
 public class EventBusConfig {
@@ -27,6 +27,8 @@ public class EventBusConfig {
     public static final String ENERGY_BUILDING_QUEUE = "energy.building.queue";
     public static final String ENERGY_GRID_QUEUE = "energy.grid.queue";
     public static final String WATER_MONITOR_QUEUE = "water.monitor.queue";
+    public static final String WATER_FLOOD_QUEUE = "water.flood.queue";
+    public static final String DISASTER_WATER_QUEUE = "disaster.water.queue";
     public static final String DISASTER_SIM_QUEUE = "disaster.sim.queue";
     public static final String INFRA_MONITOR_QUEUE = "infra.monitor.queue";
     public static final String GOVAI_DECISION_QUEUE = "govai.decision.queue";
@@ -39,6 +41,7 @@ public class EventBusConfig {
     public static final String RK_ENERGY_BUILDING = "energy.building.consumption";
     public static final String RK_ENERGY_GRID = "energy.grid.indicator";
     public static final String RK_WATER_MONITOR = "water.level.station";
+    public static final String RK_WATER_FLOOD = "water.flood.forecast";
     public static final String RK_DISASTER_SIM = "disaster.flood.scenario";
     public static final String RK_INFRA_STATUS = "infra.facility.status";
     public static final String RK_GOVAI_DECISION = "govai.decision.suggest";
@@ -83,6 +86,16 @@ public class EventBusConfig {
     @Bean
     public Queue waterMonitorQueue() {
         return QueueBuilder.durable(WATER_MONITOR_QUEUE).build();
+    }
+
+    @Bean
+    public Queue waterFloodQueue() {
+        return QueueBuilder.durable(WATER_FLOOD_QUEUE).build();
+    }
+
+    @Bean
+    public Queue disasterWaterQueue() {
+        return QueueBuilder.durable(DISASTER_WATER_QUEUE).build();
     }
 
     @Bean
@@ -134,6 +147,16 @@ public class EventBusConfig {
     @Bean
     public Binding waterMonitorBinding() {
         return BindingBuilder.bind(waterMonitorQueue()).to(cityEventExchange()).with(RK_WATER_MONITOR);
+    }
+
+    @Bean
+    public Binding waterFloodBinding() {
+        return BindingBuilder.bind(waterFloodQueue()).to(cityEventExchange()).with(RK_WATER_FLOOD);
+    }
+
+    @Bean
+    public Binding disasterWaterBinding() {
+        return BindingBuilder.bind(disasterWaterQueue()).to(cityEventExchange()).with(RK_WATER_MONITOR);
     }
 
     @Bean

@@ -3,6 +3,7 @@ package com.cityplatform.energy.analyzer;
 import com.cityplatform.energy.model.Building;
 import com.cityplatform.energy.model.BuildingType;
 import com.cityplatform.energy.model.EnergyConsumptionRecord;
+import lombok.Data;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -198,6 +199,7 @@ public class BuildingEnergyAnalyzer {
     /**
      * 能耗分析结果
      */
+    @Data
     public static class EnergyAnalysisResult {
         private String buildingId;
         private Double avgDailyConsumption;
@@ -207,51 +209,16 @@ public class BuildingEnergyAnalyzer {
         private String efficiencyRating;
         private Boolean anomalyDetected;
         private String anomalyDescription;
-
-        public String getBuildingId() { return buildingId; }
-        public void setBuildingId(String buildingId) { this.buildingId = buildingId; }
-
-        public Double getAvgDailyConsumption() { return avgDailyConsumption; }
-        public void setAvgDailyConsumption(Double avgDailyConsumption) { this.avgDailyConsumption = avgDailyConsumption; }
-
-        public Double getPeakConsumption() { return peakConsumption; }
-        public void setPeakConsumption(Double peakConsumption) { this.peakConsumption = peakConsumption; }
-
-        public Double getEnergyIntensity() { return energyIntensity; }
-        public void setEnergyIntensity(Double energyIntensity) { this.energyIntensity = energyIntensity; }
-
-        public Double getCarbonFootprint() { return carbonFootprint; }
-        public void setCarbonFootprint(Double carbonFootprint) { this.carbonFootprint = carbonFootprint; }
-
-        public String getEfficiencyRating() { return efficiencyRating; }
-        public void setEfficiencyRating(String efficiencyRating) { this.efficiencyRating = efficiencyRating; }
-
-        public Boolean getAnomalyDetected() { return anomalyDetected; }
-        public void setAnomalyDetected(Boolean anomalyDetected) { this.anomalyDetected = anomalyDetected; }
-
-        public String getAnomalyDescription() { return anomalyDescription; }
-        public void setAnomalyDescription(String anomalyDescription) { this.anomalyDescription = anomalyDescription; }
     }
 
     /**
      * 节能潜力
      */
+    @Data
     public static class EnergySavingPotential {
         private Double estimatedSavingKwh;
         private Double estimatedSavingCost;
         private Double estimatedCarbonReduction;
         private List<String> recommendations;
-
-        public Double getEstimatedSavingKwh() { return estimatedSavingKwh; }
-        public void setEstimatedSavingKwh(Double estimatedSavingKwh) { this.estimatedSavingKwh = estimatedSavingKwh; }
-
-        public Double getEstimatedSavingCost() { return estimatedSavingCost; }
-        public void setEstimatedSavingCost(Double estimatedSavingCost) { this.estimatedSavingCost = estimatedSavingCost; }
-
-        public Double getEstimatedCarbonReduction() { return estimatedCarbonReduction; }
-        public void setEstimatedCarbonReduction(Double estimatedCarbonReduction) { this.estimatedCarbonReduction = estimatedCarbonReduction; }
-
-        public List<String> getRecommendations() { return recommendations; }
-        public void setRecommendations(List<String> recommendations) { this.recommendations = recommendations; }
     }
 }

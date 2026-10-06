@@ -1,11 +1,13 @@
 package com.cityplatform.environment.model.enums;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
  * AQI空气质量指数等级枚举
  */
 @Getter
+@AllArgsConstructor
 public enum AQILevel {
 
     GOOD(0, 50, "优", "绿色"),
@@ -19,13 +21,6 @@ public enum AQILevel {
     private final int max;
     private final String description;
     private final String color;
-
-    AQILevel(int min, int max, String description, String color) {
-        this.min = min;
-        this.max = max;
-        this.description = description;
-        this.color = color;
-    }
 
     /**
      * 根据AQI值获取对应等级

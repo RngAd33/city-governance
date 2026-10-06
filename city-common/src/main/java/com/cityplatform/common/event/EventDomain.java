@@ -1,8 +1,13 @@
 package com.cityplatform.common.event;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
 /**
  * 城市事件领域枚举
  */
+@Getter
+@AllArgsConstructor
 public enum EventDomain {
     TRAFFIC("traffic", "交通流"),
     ENVIRONMENT("environment", "环境监测"),
@@ -13,12 +18,4 @@ public enum EventDomain {
 
     private final String code;
     private final String description;
-
-    EventDomain(String code, String description) {
-        this.code = code;
-        this.description = description;
-    }
-
-    public String getCode() { return code; }
-    public String getDescription() { return description; }
 }

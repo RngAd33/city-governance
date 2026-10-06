@@ -144,7 +144,67 @@
 告警解释
 
 ### POST /api/govai/report/generate
-报告生成
+报告生成（报告中心"生成报告"入口）
+
+**请求体**（兼容 type/reportType、date/period 字段名）
+```json
+{
+  "type": "日报",
+  "city": "南京市",
+  "date": "今日"
+}
+```
+
+**参数说明**
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| type / reportType | string | 是 | 报告类型：日报/周报/简报/风险提示（或 DAILY/WEEKLY/BRIEF/RISK_ALERT） |
+| city | string | 否 | 城市，默认南京市 |
+| date / period | string | 否 | 报告周期描述，默认"今日" |
+
+**响应**：`{ id, title, type, typeCode, city, period, author, status, createdAt, content, reportType, report, recordId }`
+
+### GET /api/govai/report/list
+报告列表（报告中心）
+
+**参数**: type（可选，日报/周报/简报/风险提示或英文代码），按创建时间倒序
+
+**响应**: `{ total, reports: [{ id, title, type, typeCode, city, period, author, status, createdAt }] }`（摘要，不含正文）
+
+### GET /api/govai/report/{id}
+报告详情（含完整 Markdown 正文）
+
+**响应**: 列表摘要字段 + `content`；未找到返回 404
+
+### GET /api/govai/report/{id}/pdf
+报告 PDF 导出（报告中心"导出 PDF"入口）：将报告渲染为 PDF 文件返回
+
+**响应**
+- `200`: `Content-Type: application/pdf`，二进制流；`Content-Disposition: attachment; filename*=UTF-8''<报告标题>.pdf`
+- `404`: 报告不存在
+- `500`: `{ "error": "..." }`（如部署环境缺少中文字体）
+
+**说明**：Markdown 正文简化排版（标题/列表/表格/分隔线）；中文字体按级探测（classpath:/fonts/report-cn.ttf → 系统字体），容器部署时可将中文 TTF 字体放入 `/app/fonts/report-cn.ttf`
 
 ### POST /api/govai/plan/retrieve
 预案检索
+
+## 7. 基础设施运维服务 (city-infra) - 端口 8087
+
+### GET /api/infra/status
+设施实时状态总览（南京5类重点设施最新评分与告警级别）
+
+**响应**: `{ facilities: [{ facility, facilityName, statusScore, statusTime, alertLevel, alertTime }], summary: { facilityCount, avgScore, normalCount, attentionCount, warningCount, dangerCount, lastUpdateTime } }`
+
+### GET /api/infra/history
+设施状态评分趋势（基础设施运维页面趋势图）
+
+**参数**: facility（默认 bridge，可选 bridge/tunnel/road/pipeline/power_grid）、hours（默认 24，范围 1~2160）
+
+**响应**: `FacilityStatusRecord` 数组（按时间升序）：`[{ id, facility, metricType, value, unit, timestamp, city, source }]`
+
+**降采样说明**: 窗口 ≤48 小时返回原始点（数据约 50 秒/条）；窗口 >48 小时按自然小时聚合，每点为该小时评分均值（`value` 保留1位小数，`timestamp` 为小时整点，其余字段取组内最后一条）——响应结构与原始点一致，前端无需改动
+
+### GET /api/infra/work-orders
+南京地区基础设施运维工单列表（按创建时间倒序）

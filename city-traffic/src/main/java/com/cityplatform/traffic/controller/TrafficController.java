@@ -1,5 +1,6 @@
 package com.cityplatform.traffic.controller;
 
+import com.cityplatform.traffic.entity.OptimizationRecord;
 import com.cityplatform.traffic.model.Intersection;
 import com.cityplatform.traffic.model.SignalPhase;
 import com.cityplatform.traffic.model.TrafficFlowData;
@@ -8,7 +9,6 @@ import com.cityplatform.traffic.repository.OptimizationRecordRepository;
 import com.cityplatform.traffic.service.SignalOptimizationService;
 import com.cityplatform.traffic.service.TrafficDataWindow;
 import com.cityplatform.traffic.simulator.TrafficSimulator;
-import com.cityplatform.traffic.entity.OptimizationRecord;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

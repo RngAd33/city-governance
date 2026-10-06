@@ -1,8 +1,8 @@
 package com.cityplatform.govai.ai;
 
-import com.cityplatform.govai.model.entity.ChatMessage;
 import com.cityplatform.govai.knowledge.KnowledgeBase;
 import com.cityplatform.govai.knowledge.KnowledgeItem;
+import com.cityplatform.govai.model.entity.ChatMessage;
 import com.cityplatform.govai.service.GovDataSummaryService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

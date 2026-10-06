@@ -7,11 +7,7 @@ import com.cityplatform.common.event.EventSource;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 模拟器环境数据源

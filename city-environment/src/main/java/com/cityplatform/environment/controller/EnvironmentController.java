@@ -1,6 +1,8 @@
 package com.cityplatform.environment.controller;
 
-import com.cityplatform.environment.model.*;
+import com.cityplatform.environment.model.AlertRecord;
+import com.cityplatform.environment.model.AlertRule;
+import com.cityplatform.environment.model.EnvironmentRecord;
 import com.cityplatform.environment.model.enums.Severity;
 import com.cityplatform.environment.monitor.AirQualityMonitor;
 import com.cityplatform.environment.monitor.WeatherMonitor;

@@ -1,13 +1,13 @@
 package com.cityplatform.govai.controller;
 
 import com.cityplatform.govai.ai.LocalLLMService;
+import com.cityplatform.govai.knowledge.KnowledgeBase;
+import com.cityplatform.govai.knowledge.KnowledgeItem;
 import com.cityplatform.govai.model.entity.ChatMessage;
 import com.cityplatform.govai.model.entity.ChatSession;
 import com.cityplatform.govai.model.entity.DecisionRecord;
 import com.cityplatform.govai.model.entity.Report;
 import com.cityplatform.govai.model.enums.ReportType;
-import com.cityplatform.govai.knowledge.KnowledgeBase;
-import com.cityplatform.govai.knowledge.KnowledgeItem;
 import com.cityplatform.govai.repository.DecisionRecordRepository;
 import com.cityplatform.govai.service.ChatHistoryService;
 import com.cityplatform.govai.service.ReportPdfService;
@@ -24,7 +24,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.cityplatform.govai.constant.ReportConstants.*;
+import static com.cityplatform.govai.constant.ReportConstants.HISTORY_LIMIT;
+import static com.cityplatform.govai.constant.ReportConstants.HITS_SUMMARY_MAX;
 
 /**
  * 政务AI决策支持REST控制器

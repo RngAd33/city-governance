@@ -1,6 +1,9 @@
 package com.cityplatform.common;
 
-import com.cityplatform.common.event.*;
+import com.cityplatform.common.event.CityEvent;
+import com.cityplatform.common.event.EventDomain;
+import com.cityplatform.common.event.EventSource;
+import com.cityplatform.common.event.GeoLocation;
 import com.cityplatform.common.mq.EventBusConfig;
 import com.cityplatform.common.util.JsonUtil;
 import org.junit.jupiter.api.Test;

@@ -1,8 +1,8 @@
 package com.cityplatform.environment.monitor;
 
-import com.cityplatform.environment.model.enums.AQILevel;
 import com.cityplatform.environment.model.AlertRecord;
 import com.cityplatform.environment.model.AlertRule;
+import com.cityplatform.environment.model.enums.AQILevel;
 import com.cityplatform.environment.model.enums.EnvironmentLevel;
 import org.springframework.stereotype.Service;
 

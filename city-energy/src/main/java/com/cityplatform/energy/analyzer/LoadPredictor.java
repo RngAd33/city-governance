@@ -1,7 +1,6 @@
 package com.cityplatform.energy.analyzer;
 
 import com.cityplatform.energy.model.Building;
-import com.cityplatform.energy.model.BuildingType;
 import org.springframework.stereotype.Component;
 
 /**

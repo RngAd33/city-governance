@@ -1,0 +1,155 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: .
+    container_name: city-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - collector
+      - traffic
+      - energy
+      - environment
+      - water
+      - govai
+    networks:
+      - city-network
+
+  collector:
+    build: ../city-governance-platform/city-collector
+    container_name: city-collector
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
+      SPRING_DATASOURCE_USERNAME: cityuser
+      SPRING_DATASOURCE_PASSWORD: citypass
+    networks:
+      - city-network
+
+  traffic:
+    build: ../city-governance-platform/city-traffic
+    container_name: city-traffic
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
+      SPRING_DATASOURCE_USERNAME: cityuser
+      SPRING_DATASOURCE_PASSWORD: citypass
+    networks:
+      - city-network
+
+  energy:
+    build: ../city-governance-platform/city-energy
+    container_name: city-energy
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
+      SPRING_DATASOURCE_USERNAME: cityuser
+      SPRING_DATASOURCE_PASSWORD: citypass
+    networks:
+      - city-network
+
+  environment:
+    build: ../city-governance-platform/city-environment
+    container_name: city-environment
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
+      SPRING_DATASOURCE_USERNAME: cityuser
+      SPRING_DATASOURCE_PASSWORD: citypass
+    networks:
+      - city-network
+
+  water:
+    build: ../city-governance-platform/city-water
+    container_name: city-water
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
+      SPRING_DATASOURCE_USERNAME: cityuser
+      SPRING_DATASOURCE_PASSWORD: citypass
+    networks:
+      - city-network
+
+  govai:
+    build: ../city-governance-platform/city-govai
+    container_name: city-govai
+    ports:
+      - "8086:8086"
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/city_platform
+      SPRING_DATASOURCE_USERNAME: cityuser
+      SPRING_DATASOURCE_PASSWORD: citypass
+    networks:
+      - city-network
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: city-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+    networks:
+      - city-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: city-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: city_platform
+      MYSQL_USER: cityuser
+      MYSQL_PASSWORD: citypass
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - city-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: city-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - city-network
+
+networks:
+  city-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
